@@ -1,0 +1,3417 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Доклаб — мессенджер</title>
+  <style>
+    :root {
+      --green:#7bb74a;
+      --green-dark:#69a03f;
+      --blue:#48a9ff;
+      --bg:#e9f2ff;
+      --bg-soft:#f3f4ff;
+      --bg-card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --border:#d1d5db;
+      --border-soft:#e5e7eb;
+
+      --chat-me:#7bb74a;
+      --chat-me-text:#ffffff;
+      --chat-other:#ffffff;
+    }
+
+    * { box-sizing:border-box; }
+
+    html, body {
+      height:100%;
+      margin:0;
+    }
+
+    body {
+      font:15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      display:flex;
+    }
+
+    .app {
+      display:flex;
+      width:100%;
+      height:100vh;
+    }
+
+    /* ЛЕВАЯ ПАНЕЛЬ */
+
+    .app-sidebar {
+      width:72px;
+      background:var(--green);
+      padding:16px 10px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:space-between;
+      border-radius:0 22px 22px 0;
+      box-shadow:4px 0 18px rgba(55,65,81,.25);
+    }
+
+    .sidebar-top {
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      flex:1;
+      width:100%;
+    }
+
+    #sidebar-avatar {
+      width:44px;
+      height:44px;
+      border-radius:999px;
+      overflow:hidden;
+      border:2px solid rgba(255,255,255,.9);
+      background:#f3f4ff center/cover no-repeat;
+      cursor:pointer;
+      margin-top:4px;
+    }
+
+    .nav-buttons {
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      margin-top:auto;
+      margin-bottom:auto;
+      align-items:center;
+      width:100%;
+    }
+
+    .nav-item {
+      width:40px;
+      height:40px;
+      border-radius:14px;
+      border:0;
+      background:rgba(255,255,255,.18);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      color:#fff;
+      transition:background .15s, transform .05s, box-shadow .15s, opacity .15s;
+    }
+    .nav-item:hover {
+      background:rgba(255,255,255,.30);
+    }
+    .nav-item--active {
+      background:#ffffff;
+      box-shadow:0 10px 22px rgba(15,23,42,.25);
+    }
+    .nav-item img {
+      width:24px;
+      height:24px;
+      display:block;
+      pointer-events:none;
+    }
+
+    .sidebar-bottom {
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .nav-item:focus,
+    .nav-item:focus-visible,
+    .nav-item:active {
+      outline:none;
+      box-shadow:inherit;
+    }
+    #sidebar-avatar:focus,
+    #sidebar-avatar:focus-visible { outline:none; }
+
+    /* ПРАВАЯ ЧАСТЬ */
+
+    .app-main {
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      padding:16px 18px 18px;
+      gap:16px;
+      overflow:hidden;
+    }
+
+    .topbar {
+      display:flex;
+      align-items:center;
+      gap:16px;
+    }
+
+    .topbar-search {
+      flex:1;
+      max-width:420px;
+    }
+
+    #global-search {
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff;
+      font:inherit;
+      outline:none;
+    }
+    #global-search::placeholder { color:#9ca3af; }
+    #global-search:focus {
+      border-color:var(--blue);
+      box-shadow:0 0 0 1px rgba(72,169,255,.35);
+    }
+
+    .screens {
+      flex:1;
+      display:flex;
+      border-radius:24px;
+      background:var(--bg-soft);
+      border:1px solid var(--border-soft);
+      overflow:hidden;
+    }
+
+    .screen {
+      flex:1;
+      display:none;
+    }
+    .screen--active { display:flex; }
+
+    /* ЧАТ */
+
+    .chat-layout {
+      display:grid;
+      grid-template-columns:320px minmax(0,1fr);
+      width:100%;
+    }
+    @media (max-width:900px) {
+      .chat-layout { grid-template-columns:260px minmax(0,1fr); }
+    }
+    @media (max-width:720px) {
+      .chat-layout { grid-template-columns:1fr; }
+      .chat-sidebar { display:none; }
+    }
+
+    .chat-sidebar {
+      background:var(--bg-soft);
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .chat-sidebar-header {
+      padding:4px 4px 0;
+    }
+
+    #new-room-btn {
+      width:100%;
+      padding:8px 12px;
+      border-radius:14px;
+      border:0;
+      background:var(--green);
+      color:#fff;
+      font:inherit;
+      cursor:pointer;
+      box-shadow:0 8px 18px rgba(123,183,74,.35);
+    }
+    #new-room-btn:hover { background:var(--green-dark); }
+
+    .chat-sidebar-note {
+      margin-top:6px;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .chat-sections {
+      flex:1;
+      overflow:auto;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .chat-section {
+      background:#ffffff;
+      border-radius:20px;
+      box-shadow:0 10px 26px rgba(15,23,42,.08);
+      padding:10px 0 4px;
+    }
+
+    .chat-section-title {
+      font-size:16px;
+      font-weight:700;
+      padding:0 16px 6px;
+    }
+
+    .chat-section-list {
+      display:flex;
+      flex-direction:column;
+    }
+
+    .room {
+      padding:8px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      font-size:14px;
+      cursor:pointer;
+      border-top:1px solid var(--border-soft);
+    }
+    .room:first-child { border-top:none; }
+    .room:hover { background:#f3f4ff; }
+    .room--active { background:#eff6ff; }
+
+    .room-main {
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .room-avatar {
+      width:32px;
+      height:32px;
+      border-radius:999px;
+      background:#e0f2fe;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:600;
+      font-size:15px;
+      color:#0369a1;
+      overflow:hidden;
+    }
+
+    .room-text {
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .room-name { font-weight:600; }
+    .room-subtitle {
+      font-size:12px;
+      color:#6b7280;
+    }
+
+    .room-right {
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap:4px;
+      font-size:11px;
+    }
+    .room-time { color:#9ca3af; }
+    .room-unread {
+      min-width:20px;
+      padding:2px 7px;
+      border-radius:999px;
+      background:#e0f2fe;
+      color:#0369a1;
+      font-weight:600;
+      text-align:center;
+    }
+    .room-lock {
+      font-size:13px;
+      color:#9ca3af;
+    }
+
+    .chat-main {
+      display:flex;
+      flex-direction:column;
+      background:var(--bg-soft);
+    }
+
+    .chat-empty {
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:15px;
+      color:#9ca3af;
+    }
+
+    .chat-panel {
+      flex:1;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .chat-header {
+      padding:12px 16px 10px;
+      border-bottom:1px solid var(--border-soft);
+      background:var(--bg-card);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    #room-title {
+      font-size:17px;
+      font-weight:600;
+      margin-bottom:2px;
+    }
+
+    .room-subline {
+      font-size:13px;
+      color:var(--muted);
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .chat-header-actions {
+      position:relative;
+      display:flex;
+      align-items:center;
+    }
+
+    .chat-more-btn {
+      width:32px;
+      height:32px;
+      border-radius:999px;
+      border:0;
+      background:#f3f4ff;
+      cursor:pointer;
+      font-size:20px;
+      line-height:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#6b7280;
+      padding-bottom:3px;
+    }
+    .chat-more-btn:hover {
+      background:#e5e7eb;
+    }
+
+    .chat-menu {
+      position:absolute;
+      top:38px;
+      right:0;
+      min-width:180px;
+      background:#ffffff;
+      border-radius:12px;
+      box-shadow:0 18px 40px rgba(15,23,42,.45);
+      padding:4px 0;
+      display:none;
+      z-index:60;
+    }
+    .chat-menu--show {
+      display:block;
+    }
+    .chat-menu button {
+      width:100%;
+      text-align:left;
+      border:0;
+      background:transparent;
+      padding:7px 14px;
+      cursor:pointer;
+      font:inherit;
+      font-size:14px;
+    }
+    .chat-menu button:hover {
+      background:#f3f4ff;
+    }
+
+    .chat-body {
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+
+    #messages {
+      flex:1;
+      padding:14px 16px 10px;
+      overflow:auto;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    #typing-indicator {
+      padding:0 16px 6px;
+      font-size:12px;
+      color:var(--muted);
+      min-height:18px;
+    }
+
+    .message-row {
+      display:flex;
+      width:100%;
+    }
+    .message-row--me { justify-content:flex-end; }
+    .message-row--other { justify-content:flex-start; }
+
+    .message-bubble {
+      max-width:60%;
+      padding:8px 10px;
+      border-radius:14px;
+      position:relative;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .message-bubble--me {
+      background:var(--chat-me);
+      color:var(--chat-me-text);
+      border-bottom-right-radius:4px;
+    }
+    .message-bubble--other {
+      background:var(--chat-other);
+      border:1px solid var(--border-soft);
+      border-bottom-left-radius:4px;
+    }
+
+    .message-reply {
+      border-left:3px solid rgba(148,163,184,.9);
+      padding:3px 8px;
+      margin-bottom:4px;
+      border-radius:8px;
+      font-size:12px;
+    }
+    .message-bubble--me .message-reply {
+      background:rgba(255,255,255,.16);
+      border-left-color:rgba(209,250,229,.9);
+    }
+    .message-bubble--other .message-reply {
+      background:#f3f4ff;
+      border-left-color:#cbd5f5;
+    }
+    .message-reply-author {
+      font-weight:500;
+      margin-bottom:1px;
+    }
+    .message-reply-text {
+      max-height:2.6em;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+    }
+
+    .message-text {
+      white-space:pre-wrap;
+      word-wrap:break-word;
+      font-size:14px;
+    }
+
+    .message-meta {
+      font-size:11px;
+      opacity:.85;
+      align-self:flex-end;
+      display:flex;
+      align-items:center;
+      gap:4px;
+    }
+
+    .message-meta-edited {
+      font-size:11px;
+      opacity:.8;
+    }
+
+    .msg-ticks {
+      font-size:12px;
+      margin-left:2px;
+    }
+    .msg-ticks--single::before {
+      content:"✓";
+      color:#9ca3af;
+    }
+    .msg-ticks--double::before {
+      content:"✓✓";
+      color:#3b82f6;
+    }
+
+    .message-file a {
+      font-size:13px;
+      text-decoration:none;
+    }
+
+    .message-row.message-deleted .message-text {
+      font-style:italic;
+    }
+    .message-row--me.message-deleted .message-text {
+      color:#ffffff;
+    }
+    .message-row--other.message-deleted .message-text {
+      color:#9ca3af;
+    }
+
+    .chat-input {
+      padding:10px 14px 12px;
+      border-top:1px solid var(--border-soft);
+      background:var(--bg-card);
+      display:flex;
+      gap:8px;
+      align-items:flex-end;
+      flex-wrap:wrap;
+    }
+
+    #reply-info,
+    #edit-info {
+      flex-basis:100%;
+      display:none;
+      align-items:center;
+      gap:8px;
+      font-size:12px;
+      color:#4b5563;
+      background:#e5e7eb;
+      border-radius:10px;
+      padding:6px 8px;
+    }
+    #reply-info button,
+    #edit-info button {
+      border:0;
+      background:transparent;
+      color:#ef4444;
+      cursor:pointer;
+      font-size:12px;
+      padding:0;
+    }
+
+    #message-input {
+      flex:1;
+      min-width:160px;
+      padding:10px 11px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#f9fafb;
+      font:inherit;
+      outline:none;
+    }
+    #message-input::placeholder { color:#9ca3af; }
+    #message-input:focus {
+      border-color:var(--blue);
+      background:#fff;
+      box-shadow:0 0 0 1px rgba(72,169,255,.3);
+    }
+
+    #send-btn {
+      padding:9px 16px;
+      border-radius:16px;
+      border:0;
+      background:var(--green);
+      color:#fff;
+      font:inherit;
+      cursor:pointer;
+    }
+    #send-btn:hover { background:var(--green-dark); }
+
+    #file-input { display:none; }
+    #file-label {
+      width:36px;
+      height:36px;
+      border-radius:14px;
+      border:0;
+      background:#edf2ff;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    #file-label img {
+      width:18px;
+      height:18px;
+      display:block;
+    }
+
+    #file-info {
+      display:none;
+      align-items:center;
+      gap:8px;
+      background:#f3f4ff;
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:13px;
+    }
+    #file-name {
+      max-width:200px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    #file-clear {
+      padding:5px 9px;
+      border-radius:999px;
+      border:0;
+      background:#e5e7eb;
+      cursor:pointer;
+      font-size:12px;
+    }
+
+    /* КОНТЕКСТНОЕ МЕНЮ */
+
+    .msg-menu {
+      position:fixed;
+      min-width:170px;
+      background:#ffffff;
+      border-radius:12px;
+      box-shadow:0 18px 40px rgba(15,23,42,.45);
+      padding:4px 0;
+      display:none;
+      z-index:70;
+    }
+    .msg-menu--show { display:block; }
+    .msg-menu button {
+      width:100%;
+      text-align:left;
+      border:0;
+      background:transparent;
+      padding:7px 14px;
+      cursor:pointer;
+      font:inherit;
+      font-size:14px;
+    }
+    .msg-menu button:hover {
+      background:#f3f4ff;
+    }
+
+    /* ЛАБОРАТОРИЯ */
+
+    .lab-layout {
+      display:grid;
+      grid-template-columns:320px minmax(0,1fr);
+      width:100%;
+    }
+    @media (max-width:900px) {
+      .lab-layout { grid-template-columns:1fr; }
+    }
+
+    .lab-form {
+      background:var(--bg-card);
+      border-right:1px solid var(--border-soft);
+      padding:18px 16px;
+    }
+    .lab-form h2 {
+      margin:0 0 14px;
+      font-size:18px;
+    }
+
+    .lab-field {
+      margin-bottom:10px;
+      display:grid;
+      gap:4px;
+      font-size:13px;
+    }
+    .lab-field label { color:#4b5563; }
+    .lab-field input,
+    .lab-field textarea,
+    .lab-field select {
+      font:inherit;
+      padding:9px 10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:#f9fafb;
+    }
+
+    #lab-submit {
+      margin-top:8px;
+      padding:9px 16px;
+      border-radius:16px;
+      border:0;
+      background:var(--green);
+      color:#fff;
+      font:inherit;
+      cursor:pointer;
+    }
+    #lab-submit:hover { background:var(--green-dark); }
+
+    .lab-results {
+      padding:18px 18px 18px 16px;
+      background:#f9fafb;
+      display:flex;
+      flex-direction:column;
+    }
+    .lab-results-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:10px;
+    }
+    .lab-tabs {
+      display:flex;
+      gap:8px;
+      margin-bottom:10px;
+    }
+    .lab-tab {
+      padding:7px 12px;
+      border-radius:999px;
+      border:0;
+      background:#e5e7eb;
+      font-size:13px;
+      cursor:pointer;
+    }
+    .lab-tab--active {
+      background:#d1fae5;
+      color:#047857;
+    }
+    #lab-list {
+      flex:1;
+      overflow:auto;
+      font-size:14px;
+    }
+    .lab-row {
+      padding:8px 0;
+      border-bottom:1px solid var(--border-soft);
+    }
+    .lab-row-top {
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      margin-bottom:2px;
+    }
+    .lab-row-title { font-weight:500; }
+    .lab-row-status {
+      font-size:13px;
+      color:#6b7280;
+    }
+    .lab-chip {
+      padding:3px 9px;
+      border-radius:999px;
+      font-size:12px;
+    }
+    .lab-chip--ready {
+      background:#dcfce7;
+      color:#15803d;
+    }
+    .lab-chip--wait {
+      background:#fef9c3;
+      color:#a16207;
+    }
+    .lab-empty {
+      padding:12px 2px;
+      font-size:13px;
+      color:#9ca3af;
+    }
+
+    /* КАЛЕНДАРЬ */
+
+    .calendar-layout {
+      flex:1;
+      display:grid;
+      grid-template-columns:260px minmax(0,1fr);
+      width:100%;
+      background:var(--bg-card);
+    }
+    @media (max-width:860px) {
+      .calendar-layout { grid-template-columns:1fr; }
+    }
+
+    .calendar-sidebar {
+      border-right:1px solid var(--border-soft);
+      padding:16px;
+      background:#f9fafb;
+      font-size:13px;
+    }
+
+    .calendar-month-row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:6px;
+      margin-bottom:6px;
+    }
+
+    #month-label-left {
+      font-size:18px;
+      font-weight:600;
+    }
+
+    .cal-month-btn {
+      width:26px;
+      height:26px;
+      border-radius:999px;
+      border:0;
+      background:#e5e7eb;
+      cursor:pointer;
+      font-size:16px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .cal-month-btn:hover { background:#d1d5db; }
+
+    .mini-month table {
+      width:100%;
+      border-collapse:collapse;
+    }
+    .mini-month th,
+    .mini-month td {
+      text-align:center;
+      padding:3px;
+      font-size:11px;
+      color:#4b5563;
+    }
+    .mini-day {
+      cursor:pointer;
+      border-radius:999px;
+      transition:background .15s, color .15s;
+    }
+    .mini-day.mini-active {
+      background:#3b82f6;
+      color:#fff;
+    }
+
+    .calendar-today-title {
+      margin-top:10px;
+      font-weight:600;
+    }
+
+    .calendar-main {
+      padding:12px 16px 16px;
+      overflow:auto;
+      background:#f3f4ff;
+    }
+
+    .calendar-main-header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .calendar-main-header h2 {
+      margin:0;
+      font-size:18px;
+    }
+    #month-label-main {
+      font-size:14px;
+      color:#6b7280;
+    }
+
+    .calendar-main-left {
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .calendar-tags {
+      display:flex;
+      gap:6px;
+    }
+    .calendar-tag {
+      padding:4px 9px;
+      border-radius:999px;
+      background:#e5e7eb;
+      font-size:12px;
+      cursor:pointer;
+      opacity:.85;
+    }
+    .calendar-tag--active {
+      background:#7bb74a;
+      color:#ffffff;
+      opacity:1;
+    }
+
+    #add-visit-btn {
+      margin-left:12px;
+      padding:8px 18px;
+      border-radius:16px;
+      border:0;
+      background:#3b82f6;
+      color:#fff;
+      font:inherit;
+      cursor:pointer;
+      font-size:13px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      box-shadow:0 10px 22px rgba(37,99,235,.45);
+    }
+    #add-visit-btn span {
+      font-size:18px;
+      line-height:1;
+    }
+    #add-visit-btn:hover { background:#2563eb; }
+
+    .calendar-grid {
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+      background:#ffffff;
+      border-radius:16px;
+      overflow:hidden;
+      box-shadow:0 6px 20px rgba(15,23,42,.08);
+    }
+    .calendar-grid th {
+      text-align:left;
+      padding:6px 8px;
+      background:#f3f4ff;
+      border-bottom:1px solid var(--border-soft);
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      color:#6b7280;
+    }
+    .calendar-grid td {
+      height:82px;
+      vertical-align:top;
+      padding:4px 4px;
+      border:1px solid var(--border-soft);
+      position:relative;
+      background:#ffffff;
+      cursor:pointer;
+      transition:background .12s;
+    }
+    .calendar-grid td.cal-active { background:#e0ecff; }
+    .calendar-grid td.cal-active::after {
+      content:"";
+      position:absolute;
+      top:0;
+      right:0;
+      width:4px;
+      height:100%;
+      background:#60a5fa;
+      border-radius:2px 0 0 2px;
+    }
+    .cal-day-num {
+      font-size:12px;
+      color:#6b7280;
+      margin-bottom:2px;
+    }
+    .cal-events {
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .cal-event {
+      display:block;
+      margin-top:1px;
+      padding:2px 4px;
+      border-radius:4px;
+      font-size:11px;
+      background:#bbf7d0;
+      border-left:3px solid #15803d;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .cal-event--blue {
+      background:#dbeafe;
+      border-left-color:#1d4ed8;
+    }
+    .cal-event--staff {
+      background:#fee2e2;
+      border-left-color:#b91c1c;
+    }
+
+    /* ПРОФИЛЬ */
+
+    .profile-screen {
+      flex:1;
+      padding:24px;
+      background:var(--bg-soft);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .profile-card {
+      width:360px;
+      max-width:100%;
+      background:#ffffff;
+      border-radius:24px;
+      box-shadow:0 18px 45px rgba(15,23,42,.25);
+      padding:18px 20px 16px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .profile-header-row {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:8px;
+    }
+
+    .profile-header {
+      display:flex;
+      align-items:center;
+      gap:14px;
+    }
+
+    #profile-avatar {
+      width:56px;
+      height:56px;
+      border-radius:999px;
+      background:#e0f2fe center/cover no-repeat;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:24px;
+      font-weight:700;
+      color:#0369a1;
+      overflow:hidden;
+      cursor:pointer;
+    }
+
+    .profile-name-main {
+      font-size:18px;
+      font-weight:700;
+    }
+    .profile-role {
+      font-size:13px;
+      color:#6b7280;
+    }
+
+    .profile-close-btn {
+      border:0;
+      background:#f3f4ff;
+      width:28px;
+      height:28px;
+      border-radius:999px;
+      cursor:pointer;
+      font-size:16px;
+      line-height:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#6b7280;
+    }
+    .profile-close-btn:hover { background:#e5e7eb; }
+
+    .profile-body {
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .profile-field {
+      display:grid;
+      gap:4px;
+      font-size:14px;
+    }
+    .profile-field label { color:#4b5563; }
+    .profile-field input,
+    .profile-field textarea {
+      font:inherit;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:#f9fafb;
+    }
+
+    .profile-footer {
+      display:flex;
+      justify-content:flex-end;
+      margin-top:4px;
+    }
+
+    #profile-save-btn {
+      padding:8px 18px;
+      border-radius:16px;
+      border:0;
+      background:var(--green);
+      color:#fff;
+      font:inherit;
+      cursor:pointer;
+      font-size:14px;
+    }
+    #profile-save-btn:hover { background:var(--green-dark); }
+
+    /* ОВЕРЛЕИ / ТОСТЫ */
+
+    .overlay {
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,.35);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .18s ease;
+      z-index:40;
+    }
+    .overlay--show {
+      opacity:1;
+      pointer-events:auto;
+    }
+
+    .modal {
+      width:min(420px, 92vw);
+      background:#ffffff;
+      border-radius:18px;
+      padding:16px 18px 18px;
+      box-shadow:0 20px 55px rgba(15,23,42,.45);
+      display:block;
+    }
+    .modal h3 {
+      margin:0 0 12px;
+      font-size:18px;
+    }
+    .modal .field {
+      display:grid;
+      gap:6px;
+      margin-bottom:10px;
+      font-size:14px;
+    }
+    .modal .field input,
+    .modal .field textarea {
+      padding:9px 10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      font:inherit;
+    }
+    .modal-row {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    .btn-secondary {
+      padding:9px 0;
+      border-radius:16px;
+      border:0;
+      background:#e5e7eb;
+      cursor:pointer;
+      font:inherit;
+    }
+    .btn-primary {
+      padding:9px 0;
+      border-radius:16px;
+      border:0;
+      background:var(--green);
+      color:#fff;
+      cursor:pointer;
+      font:inherit;
+    }
+
+    #toasts {
+      position:fixed;
+      right:16px;
+      bottom:16px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      z-index:50;
+    }
+    .toast {
+      background:#111827;
+      color:#f9fafb;
+      border-radius:10px;
+      padding:9px 11px;
+      font-size:13px;
+      box-shadow:0 12px 30px rgba(15,23,42,.5);
+      opacity:0;
+      transform:translateY(6px);
+      animation:toastIn .18s ease-out forwards;
+    }
+    @keyframes toastIn {
+      to { opacity:1; transform:translateY(0); }
+    }
+    @keyframes toastOut {
+      to { opacity:0; transform:translateY(6px); }
+    }
+  /* Профиль беседы */
+.room-profile-modal { max-width: 640px; }
+.room-profile-top { display:flex; gap:14px; align-items:center; }
+.room-profile-avatar {
+  width:64px; height:64px; border-radius:16px;
+  background:#e9eef8; color:#1b2a49;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:20px; flex:0 0 auto;
+  background-size:cover; background-position:center;
+}
+.room-profile-title { font-size:18px; font-weight:700; }
+.room-profile-sub { margin-top:4px; color:#6b7280; font-size:13px; }
+.room-profile-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+.room-profile-tabs { display:flex; gap:8px; margin-top:14px; border-bottom:1px solid rgba(0,0,0,.08); padding-bottom:8px; }
+.room-profile-tab {
+  border:0; background:transparent; padding:8px 10px;
+  border-radius:10px; cursor:pointer; color:#1f2937;
+}
+.room-profile-tab--active { background:#eef2ff; }
+.room-profile-content { margin-top:12px; max-height:420px; overflow:auto; }
+.room-profile-pane { display:none; }
+.room-profile-pane--active { display:block; }
+.room-archive-empty { color:#6b7280; font-size:13px; padding:10px 0; }
+.room-archive-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; }
+.room-archive-item { border-radius:12px; overflow:hidden; background:#f3f4f6; cursor:pointer; }
+.room-archive-item img, .room-archive-item video { width:100%; height:100%; object-fit:cover; display:block; }
+.room-archive-list { display:flex; flex-direction:column; gap:8px; }
+.room-archive-link, .room-archive-file {
+  display:flex; justify-content:space-between; gap:10px;
+  padding:10px 12px; border-radius:12px; background:#f3f4f6;
+}
+.room-archive-link a, .room-archive-file a { color:#1b2a49; text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.room-archive-meta { color:#6b7280; font-size:12px; flex:0 0 auto; }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Левая панель -->
+  <aside class="app-sidebar">
+    <div class="sidebar-top">
+      <div id="sidebar-avatar" title="Профиль"></div>
+
+      <div class="nav-buttons">
+        <button class="nav-item" data-screen="calendar" title="Календарь">
+          <img src="icons/calendar.svg" alt="Календарь">
+        </button>
+
+        <button class="nav-item nav-item--active" data-screen="chat" title="Чаты">
+          <img src="icons/chat.svg" alt="Чаты">
+        </button>
+
+        <button class="nav-item" data-screen="lab" title="Лаборатория">
+          <img src="icons/lab.svg" alt="Лаборатория">
+        </button>
+
+        <button class="nav-item" data-screen="profile" title="Профиль">
+          <img src="icons/settings.svg" alt="Профиль">
+        </button>
+      </div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <button class="nav-item" id="sidebar-logout" title="Выход">
+        <img src="icons/logout.svg" alt="Выход">
+      </button>
+    </div>
+  </aside>
+
+  <!-- Правая часть -->
+  <div class="app-main">
+    <header class="topbar">
+      <div class="topbar-search">
+        <input id="global-search" placeholder="Поиск" />
+      </div>
+    </header>
+
+    <div class="screens">
+      <!-- ЧАТ -->
+      <section id="screen-chat" class="screen screen--active">
+        <div class="chat-layout">
+          <aside class="chat-sidebar">
+            <div class="chat-sidebar-header">
+              <button id="new-room-btn">Новая беседа</button>
+              <div class="chat-sidebar-note">Публичные беседы видны всем, личные — только участникам.</div>
+            </div>
+
+            <div class="chat-sections">
+              <div class="chat-section">
+                <div class="chat-section-title">Группы</div>
+                <div class="chat-section-list" id="groups-list"></div>
+              </div>
+
+              <div class="chat-section">
+                <div class="chat-section-title">Личные чаты</div>
+                <div class="chat-section-list" id="personal-list"></div>
+              </div>
+            </div>
+          </aside>
+
+          <div class="chat-main">
+            <div id="chat-empty" class="chat-empty">
+              Выберите беседу слева, чтобы посмотреть сообщения.
+            </div>
+
+            <div id="chat-panel" class="chat-panel" style="display:none;">
+              <div class="chat-header">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div id="chat-room-avatar" class="room-avatar" style="width:40px;height:40px;font-size:16px;"></div>
+                  <div>
+                    <div id="room-title">Чат</div>
+                  <div class="room-subline">
+                    <span id="presence">Онлайн: — / —</span>
+                  </div>
+                  </div>
+                </div>
+                <div class="chat-header-actions">
+                  <button id="chat-more-btn" class="chat-more-btn" title="Опции чата">⋯</button>
+                  <div id="chat-menu" class="chat-menu">
+                    <button type="button" data-action="profile">Профиль беседы</button>
+                    <button type="button" data-action="invite">Инвайт в беседу</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="chat-body">
+                <div id="messages"></div>
+                <div id="typing-indicator"></div>
+                <div class="chat-input">
+                  <div id="reply-info">
+                    Ответ для <span id="reply-author"></span>:
+                    <span id="reply-snippet"></span>
+                    <button id="reply-cancel-btn" type="button">Отмена</button>
+                  </div>
+
+                  <div id="edit-info">
+                    Редактирование сообщения
+                    <button id="edit-cancel-btn" type="button">Отмена</button>
+                  </div>
+
+                  <label for="file-input" id="file-label">
+                    <img src="icons/paper-clip.svg" alt="Прикрепить файл">
+                  </label>
+                  <input id="file-input" type="file" accept="image/*,video/*" />
+
+                  <input id="message-input" placeholder="Написать сообщение..." />
+                  <button id="send-btn">Отправить</button>
+
+                  <div id="file-info">
+                    <span id="file-name"></span>
+                    <button id="file-clear">✕</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ЛАБОРАТОРИЯ -->
+      <section id="screen-lab" class="screen">
+        <div class="lab-layout">
+          <div class="lab-form">
+            <h2>Запись на анализ</h2>
+            <div class="lab-field">
+              <label for="lab-policy">Полис пациента</label>
+              <input id="lab-policy" placeholder="Номер полиса" />
+            </div>
+            <div class="lab-field">
+              <label for="lab-tests">Выбор анализов</label>
+              <input id="lab-tests" placeholder="Например: ОАК, биохимия" />
+            </div>
+            <div class="lab-field">
+              <label for="lab-prep">Правила подготовки</label>
+              <textarea id="lab-prep" rows="2" placeholder="Например: натощак, без алкоголя 24 часа"></textarea>
+            </div>
+            <div class="lab-field">
+              <label for="lab-lab">Выбор лаборатории</label>
+              <select id="lab-lab">
+                <option>Лаборатория №1</option>
+                <option>Лаборатория №2</option>
+                <option>Лаборатория №3</option>
+              </select>
+            </div>
+            <div class="lab-field">
+              <label for="lab-date">Дата и время сдачи</label>
+              <input id="lab-date" type="datetime-local" />
+            </div>
+            <button id="lab-submit">Записать</button>
+          </div>
+
+          <div class="lab-results">
+            <div class="lab-results-header">
+              <h2 style="margin:0;font-size:18px;">Лаборатория</h2>
+            </div>
+            <div class="lab-tabs">
+              <button class="lab-tab lab-tab--active">Записи на анализы</button>
+              <button class="lab-tab">Доступные анализы</button>
+              <button class="lab-tab">Категории</button>
+            </div>
+            <div id="lab-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- КАЛЕНДАРЬ -->
+      <section id="screen-calendar" class="screen">
+        <div class="calendar-layout">
+          <aside class="calendar-sidebar">
+            <div class="calendar-month-row">
+              <button id="month-prev" class="cal-month-btn">‹</button>
+              <div id="month-label-left"></div>
+              <button id="month-next" class="cal-month-btn">›</button>
+            </div>
+            <div class="mini-month">
+              <table>
+                <thead>
+                  <tr><th>ПН</th><th>ВТ</th><th>СР</th><th>ЧТ</th><th>ПТ</th><th>СБ</th><th>ВС</th></tr>
+                </thead>
+                <tbody id="mini-body"></tbody>
+              </table>
+            </div>
+            <div class="calendar-today-title" id="today-label"></div>
+            <ul id="today-list"></ul>
+          </aside>
+
+          <div class="calendar-main">
+            <div class="calendar-main-header">
+              <div class="calendar-main-left">
+                <h2>Календарь</h2>
+                <span id="month-label-main"></span>
+              </div>
+              <div style="display:flex;align-items:center;">
+                <div class="calendar-tags">
+                  <span class="calendar-tag" data-filter="oper">Операционные</span>
+                  <span class="calendar-tag" data-filter="staff">Сотрудники</span>
+                  <span class="calendar-tag" data-filter="mine">Ваши мероприятия</span>
+                </div>
+                <button id="add-visit-btn"><span>+</span> Добавить</button>
+              </div>
+            </div>
+
+            <table class="calendar-grid">
+              <thead>
+                <tr>
+                  <th>SUN</th><th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th>
+                </tr>
+              </thead>
+              <tbody id="cal-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ПРОФИЛЬ -->
+      <section id="screen-profile" class="screen">
+        <div class="profile-screen">
+          <div class="profile-card">
+            <div class="profile-header-row">
+              <div class="profile-header">
+                <div id="profile-avatar">DR</div>
+                <div>
+                  <div class="profile-name-main" id="profile-name-header">Имя пользователя</div>
+                  <div class="profile-role" id="profile-role-header">Должность</div>
+                </div>
+              </div>
+              <button class="profile-close-btn" id="profile-close-btn" title="Закрыть профиль">✕</button>
+            </div>
+
+            <div class="profile-body">
+              <div class="profile-field">
+                <label for="profile-name">ФИО</label>
+                <input id="profile-name" />
+              </div>
+              <div class="profile-field">
+                <label for="profile-role">Должность</label>
+                <input id="profile-role" placeholder="Например: Хирург" />
+              </div>
+              <div class="profile-field">
+                <label for="profile-dept">Отделение</label>
+                <input id="profile-dept" placeholder="Например: Хирургическое отделение" />
+              </div>
+              <div class="profile-field">
+                <label for="profile-phone">Телефон</label>
+                <input id="profile-phone" placeholder="+7 (___) ___-__-__" />
+              </div>
+              <div class="profile-field">
+                <label for="profile-email">Email</label>
+                <input id="profile-email" placeholder="user@example.com" />
+              </div>
+              <div class="profile-field">
+                <label for="profile-notes">Заметки</label>
+                <textarea id="profile-notes" rows="3" placeholder="Краткая информация о графике, специализации и т.д."></textarea>
+              </div>
+            </div>
+
+            <div class="profile-footer">
+              <button id="profile-save-btn">Сохранить профиль</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Профиль беседы -->
+<div class="overlay" id="room-profile-modal">
+  <div class="modal room-profile-modal">
+    <div class="room-profile-top">
+      <div class="room-profile-avatar" id="room-profile-avatar">CH</div>
+      <div class="room-profile-top-main">
+        <div class="room-profile-title" id="room-profile-title">Беседа</div>
+        <div class="room-profile-sub" id="room-profile-sub">—</div>
+      </div>
+    </div>
+
+    <div class="room-profile-actions" id="room-profile-actions" style="display:none;">
+      <button class="btn-primary" id="room-profile-rename-btn" type="button">Изменить название</button>
+      <button class="btn-primary" id="room-profile-avatar-btn" type="button">Аватар</button>
+      <button class="btn-primary" id="room-profile-delete-btn" type="button">Удалить беседу</button>
+      <input id="room-avatar-input" type="file" accept="image/*" style="display:none;" />
+    </div>
+
+    <div class="room-profile-tabs">
+      <button type="button" class="room-profile-tab room-profile-tab--active" data-tab="media">Медиа</button>
+      <button type="button" class="room-profile-tab" data-tab="links">Ссылки</button>
+      <button type="button" class="room-profile-tab" data-tab="files">Файлы</button>
+    </div>
+
+    <div class="room-profile-content">
+      <div class="room-profile-pane room-profile-pane--active" data-pane="media" id="room-profile-media"></div>
+      <div class="room-profile-pane" data-pane="links" id="room-profile-links"></div>
+      <div class="room-profile-pane" data-pane="files" id="room-profile-files"></div>
+    </div>
+
+    <div class="modal-row">
+      <button class="btn-primary" id="room-profile-close-btn" type="button">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка переименования беседы -->
+<div class="overlay" id="room-rename-modal">
+  <div class="modal">
+    <h3>Изменить название</h3>
+    <div class="field">
+      <label for="room-rename-input">Название</label>
+      <input id="room-rename-input" placeholder="Новое название" />
+    </div>
+    <div class="modal-row">
+      <button class="btn-primary" id="room-rename-save-btn" type="button">Сохранить</button>
+      <button class="btn-secondary" id="room-rename-cancel-btn" type="button">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка новой беседы -->
+<div class="overlay" id="room-modal">
+  <div class="modal">
+    <h3>Новая беседа</h3>
+    <div class="field">
+      <label for="room-name-input">Название</label>
+      <input id="room-name-input" placeholder="Например: Приемная" />
+    </div>
+    <div class="field">
+      <label>
+        <input id="room-public-input" type="checkbox" />
+        Публичная беседа (групповой чат)
+      </label>
+    </div>
+    <div class="modal-row">
+      <button class="btn-primary" id="room-create-btn">Создать</button>
+      <button class="btn-secondary" id="room-cancel-btn">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка записи пациента -->
+<div class="overlay" id="visit-modal">
+  <div class="modal">
+    <h3>Новая запись пациента</h3>
+    <div class="field">
+      <label for="visit-patient">ФИО пациента</label>
+      <input id="visit-patient" />
+    </div>
+    <div class="field">
+      <label for="visit-room">Кабинет / палата</label>
+      <input id="visit-room" placeholder="Например: 3.2 — Павлов" />
+    </div>
+    <div class="field">
+      <label for="visit-date">Дата</label>
+      <input id="visit-date" type="date" />
+    </div>
+    <div class="field">
+      <label for="visit-time-from">Время</label>
+      <input id="visit-time-from" type="time" />
+    </div>
+    <div class="modal-row">
+      <button class="btn-primary" id="visit-save-btn">Записать</button>
+      <button class="btn-secondary" id="visit-cancel-btn">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка инвайта -->
+<div class="overlay" id="invite-modal">
+  <div class="modal">
+    <h3>Инвайт в беседу</h3>
+    <div class="field">
+      <label for="invite-user">Имя пользователя</label>
+      <input id="invite-user" placeholder="Имя пользователя" />
+    </div>
+    <div class="modal-row">
+      <button class="btn-primary" id="invite-btn">Пригласить</button>
+      <button class="btn-secondary" id="invite-cancel-btn">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<input id="avatar-input" type="file" accept="image/*" style="display:none" />
+
+<div id="toasts"></div>
+
+<!-- Контекстное меню сообщения -->
+<div class="msg-menu" id="msg-menu">
+  <button data-action="reply">Ответить</button>
+  <button data-action="edit">Редактировать</button>
+  <button data-action="delete">Удалить</button>
+</div>
+
+<script>
+  const MAX_BYTES = 100 * 1024 * 1024;
+  const AVATAR_KEY = 'doclab_avatar';
+  const PROFILE_KEY = 'doclab_profile';
+  const APPOINTMENTS_KEY = 'doclab_appointments';
+
+  const username = localStorage.getItem('chat_user');
+  const password = localStorage.getItem('chat_pass');
+  if (!username || !password) {
+    location.href = 'login.html';
+  }
+
+  /* Навигация по экранам */
+
+  const screens = document.querySelectorAll('.screen');
+  const navItems = document.querySelectorAll('.nav-item[data-screen]');
+
+  function setScreen(name) {
+    screens.forEach(sec => {
+      sec.classList.toggle('screen--active', sec.id === 'screen-' + name);
+    });
+    navItems.forEach(btn => {
+      btn.classList.toggle('nav-item--active', btn.dataset.screen === name);
+    });
+  }
+
+  navItems.forEach(btn => {
+    btn.addEventListener('click', () => setScreen(btn.dataset.screen));
+  });
+
+  document.getElementById('sidebar-avatar').addEventListener('click', () => {
+    setScreen('profile');
+  });
+
+  function performLogout() {
+    localStorage.removeItem('chat_user');
+    localStorage.removeItem('chat_pass');
+    location.href = 'login.html';
+  }
+  document.getElementById('sidebar-logout').addEventListener('click', performLogout);
+
+  /* Тосты */
+
+  const toastsEl = document.getElementById('toasts');
+  function showToast(text, timeout = 2500) {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = text;
+    toastsEl.appendChild(el);
+    setTimeout(() => {
+      el.style.animation = 'toastOut .18s ease-in forwards';
+      setTimeout(() => el.remove(), 220);
+    }, timeout);
+  }
+
+  /* Аватар */
+
+  const sidebarAvatar = document.getElementById('sidebar-avatar');
+  const profileAvatar = document.getElementById('profile-avatar');
+  const avatarInput = document.getElementById('avatar-input');
+
+  function applyAvatar(dataUrl) {
+    if (dataUrl) {
+      sidebarAvatar.style.backgroundImage = 'url(' + dataUrl + ')';
+      sidebarAvatar.style.backgroundPosition = 'center';
+      sidebarAvatar.style.backgroundSize = 'cover';
+
+      profileAvatar.style.backgroundImage = 'url(' + dataUrl + ')';
+      profileAvatar.textContent = '';
+    } else {
+      sidebarAvatar.style.backgroundImage = '';
+      profileAvatar.style.backgroundImage = '';
+      profileAvatar.textContent = (username || 'DR').slice(0,2).toUpperCase();
+    }
+  }
+
+  const savedAvatar = localStorage.getItem(AVATAR_KEY);
+  if (savedAvatar) applyAvatar(savedAvatar); else applyAvatar(null);
+
+  profileAvatar.addEventListener('click', () => avatarInput.click());
+
+  avatarInput.addEventListener('change', () => {
+    const file = avatarInput.files && avatarInput.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Можно выбрать только изображение');
+      avatarInput.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Файл изображения больше 5 МБ');
+      avatarInput.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      localStorage.setItem(AVATAR_KEY, dataUrl);
+      applyAvatar(dataUrl);
+      showToast('Аватар обновлён');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  /* WebSocket и чаты */
+
+  let ws = null;
+  let currentRoom = null;
+  const roomsMeta = new Map();
+  const unread = new Map();
+  const lastMessages = new Map();
+  const lastReadByOthers = new Map();
+  const messageStore = new Map();
+
+  const groupsListEl = document.getElementById('groups-list');
+  const personalListEl = document.getElementById('personal-list');
+  const messagesEl = document.getElementById('messages');
+  const presenceEl = document.getElementById('presence');
+  const roomTitleEl = document.getElementById('room-title');
+  const headerAvatarEl = document.getElementById('chat-room-avatar');
+
+  roomTitleEl.addEventListener('click', () => {
+    if (currentRoom) openRoomProfile();
+  });
+  const typingEl = document.getElementById('typing-indicator');
+  const chatEmptyEl = document.getElementById('chat-empty');
+  const chatPanelEl = document.getElementById('chat-panel');
+
+  const msgInput = document.getElementById('message-input');
+  const sendBtn = document.getElementById('send-btn');
+
+  const editInfo = document.getElementById('edit-info');
+  const editCancelBtn = document.getElementById('edit-cancel-btn');
+  let editingMessage = null;
+
+  const replyInfo = document.getElementById('reply-info');
+  const replyAuthorEl = document.getElementById('reply-author');
+  const replySnippetEl = document.getElementById('reply-snippet');
+  const replyCancelBtn = document.getElementById('reply-cancel-btn');
+  let replyContext = null;
+
+  const fileInput = document.getElementById('file-input');
+  const fileInfo = document.getElementById('file-info');
+  const fileNameEl = document.getElementById('file-name');
+  const fileClearBtn = document.getElementById('file-clear');
+  let pendingFile = null;
+
+  const msgMenu = document.getElementById('msg-menu');
+  let menuMsg = null;
+
+  const chatMoreBtn = document.getElementById('chat-more-btn');
+  const chatMenu = document.getElementById('chat-menu');
+
+  function setChatActive(active) {
+    if (active) {
+      chatEmptyEl.style.display = 'none';
+      chatPanelEl.style.display = 'flex';
+    } else {
+      chatEmptyEl.style.display = 'flex';
+      chatPanelEl.style.display = 'none';
+      messagesEl.innerHTML = '';
+      typingEl.textContent = '';
+      currentRoom = null;
+      updateRoomHeader();
+    }
+  }
+
+  function formatTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts * 1000);
+    return d.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+  }
+
+  function getMessageText(m) {
+    const raw = m && (m.text ?? m.message ?? m.body ?? m.content ?? m.msg);
+    return raw != null ? String(raw) : '';
+  }
+
+  function normalizeMessage(raw, roomHint) {
+  const msg = Object.assign({ room: roomHint || (raw && raw.room) || currentRoom }, raw || {});
+  if (msg.type === 'text') {
+    // гарантируем, что есть поле text
+    const body = getMessageText(msg);
+    msg.text = body != null ? String(body) : '';
+    }
+  return msg;
+  }
+
+  // Read receipts: last message id that someone else has read in a room
+function getLastReadByOthers(room) {
+  return Number(lastReadByOthers.get(room) || 0);
+}
+
+function updateTicksForRoom(room) {
+  if (!room || room !== currentRoom) return;
+  const upTo = getLastReadByOthers(room);
+  document.querySelectorAll('#messages .message-row--me').forEach(row => {
+    const id = Number(row.dataset.id || 0);
+    const ticks = row.querySelector('.msg-ticks');
+    if (!ticks) return;
+    const read = upTo && id <= upTo;
+    ticks.classList.toggle('msg-ticks--single', !read);
+    ticks.classList.toggle('msg-ticks--double', read);
+  });
+}
+
+function setLastReadByOthers(room, upTo) {
+  if (!room) return;
+  const n = Number(upTo || 0);
+  if (!n) return;
+  const prev = Number(lastReadByOthers.get(room) || 0);
+  if (n > prev) lastReadByOthers.set(room, n);
+  updateTicksForRoom(room);
+}
+
+function sendMarkRead(room) {
+  if (!room || !ws || ws.readyState !== WebSocket.OPEN) return;
+  const arr = messageStore.get(room) || [];
+  let upTo = 0;
+  for (let i = arr.length - 1; i >= 0; i--) {
+    const x = arr[i];
+    if (x && !x.deleted) { upTo = Number(x.id || 0); break; }
+  }
+  if (upTo) ws.send(JSON.stringify({ type:'mark_read', room, up_to: upTo }));
+}
+
+function isGroupRoom(room) {
+  return !!room && !!roomsMeta.get(room)?.public;
+}
+
+function isRoomAdmin(room) {
+  const meta = roomsMeta.get(room);
+  return !!room && !!meta && !!meta.public && meta.owner === username;
+}
+
+  function connectWs() {
+    const host = location.hostname || '127.0.0.1';
+    const scheme = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const url = scheme + host + ':8765';
+    ws = new WebSocket(url);
+
+    ws.addEventListener('open', () => {
+      ws.send(JSON.stringify({ type:'login', username, password }));
+    });
+
+    ws.addEventListener('message', (ev) => {
+      let m;
+      try { m = JSON.parse(ev.data); } catch { return; }
+
+      if (m.type === 'system') {
+        if (m.text) showToast(m.text);
+      } else if (m.type === 'error') {
+        showToast('Ошибка: ' + (m.text || ''));
+      } else if (m.type === 'auth_ok') {
+        ws.send(JSON.stringify({ type:'list_rooms' }));
+      } else if (m.type === 'rooms') {
+        updateRooms(m.items || []);
+      } else if (m.type === 'room_created') {
+        roomsMeta.set(m.room, { public:!!m.public, owner:(m.owner || username), avatar: m.avatar || null, title: m.title || null, dm: !!m.dm });
+        unread.set(m.room, 0);
+        renderRooms();
+        selectRoom(m.room);
+      } else if (m.type === 'joined') {
+        currentRoom = m.room;
+        setChatActive(true);
+        updateRoomHeader();
+        unread.set(m.room, 0);
+        sendMarkRead(m.room);
+        renderRooms();
+      } else if (m.type === 'left') {
+        if (m.room === currentRoom) {
+          setChatActive(false);
+          cancelEdit();
+          cancelReply();
+        }
+      } else if (m.type === 'history') {
+        if (m.room === currentRoom) {
+          messagesEl.innerHTML = '';
+          messageStore.set(m.room, []);
+          (m.items || []).forEach(item => {
+            const msg = Object.assign({ room:m.room }, item);
+            storeMessage(msg);
+            renderMessage(msg);
+          });
+          updateTicksForRoom(currentRoom);
+          sendMarkRead(currentRoom);
+        }
+      } else if (m.type === 'presence') {
+        if (m.room === currentRoom) {
+          updatePresence(m.users || []);
+        }
+      } else if (m.type === 'text' || m.type === 'file') {
+        handleIncomingMessage(m);
+
+} else if (m.type === 'read') {
+  // someone read messages in this room
+  if (m.room && m.from !== username) {
+    setLastReadByOthers(m.room, m.up_to);
+    // refresh preview ticks in active room
+    updateTicksForRoom(m.room);
+  }
+} else if (m.type === 'room_info') {
+  // room profile/meta from server
+  if (m.room) {
+    const meta = roomsMeta.get(m.room) || { public: !!m.public, owner: m.owner || '' };
+    if (typeof m.public === 'boolean') meta.public = !!m.public;
+    if (m.owner) meta.owner = m.owner;
+    if (m.title) meta.title = m.title;
+    if (m.avatar !== undefined) meta.avatar = m.avatar; // base64 data url or null
+    if (Array.isArray(m.members)) meta.members = m.members;
+    roomsMeta.set(m.room, meta);
+    renderRooms();
+    if (m.room === currentRoom) updateRoomHeader();
+    if (roomProfileModal.classList.contains('overlay--show') && m.room === currentRoom) {
+      renderRoomProfile();
+    }
+  }
+} else if (m.type === 'room_avatar') {
+  if (m.room) {
+    const meta = roomsMeta.get(m.room) || { public:false, owner:'' };
+    meta.avatar = m.avatar || null;
+    roomsMeta.set(m.room, meta);
+    renderRooms();
+    if (m.room === currentRoom) updateRoomHeader();
+    if (roomProfileModal.classList.contains('overlay--show') && m.room === currentRoom) renderRoomProfile();
+  }
+} else if (m.type === 'room_renamed') {
+  // rename room: move all local maps
+  const oldName = m.old || m.old_room || m.from_room;
+  const newName = m.new || m.new_room || m.room;
+  if (oldName && newName && oldName !== newName) {
+    const meta = roomsMeta.get(oldName);
+    if (meta) {
+      roomsMeta.delete(oldName);
+      roomsMeta.set(newName, meta);
+    }
+    const um = unread.get(oldName);
+    if (um != null) { unread.delete(oldName); unread.set(newName, um); }
+    const lm = lastMessages.get(oldName);
+    if (lm) { lastMessages.delete(oldName); lastMessages.set(newName, lm); }
+    const ms = messageStore.get(oldName);
+    if (ms) { messageStore.delete(oldName); messageStore.set(newName, ms.map(x => Object.assign({}, x, { room: newName }))); }
+    const rr = lastReadByOthers.get(oldName);
+    if (rr) { lastReadByOthers.delete(oldName); lastReadByOthers.set(newName, rr); }
+
+    if (currentRoom === oldName) currentRoom = newName;
+    renderRooms();
+    updateRoomHeader();
+    if (roomProfileModal.classList.contains('overlay--show')) renderRoomProfile();
+  }
+} else if (m.type === 'room_deleted') {
+  const roomName = m.room;
+  if (roomName) {
+    roomsMeta.delete(roomName);
+    unread.delete(roomName);
+    lastMessages.delete(roomName);
+    messageStore.delete(roomName);
+    lastReadByOthers.delete(roomName);
+    if (currentRoom === roomName) {
+      setChatActive(false);
+      showToast('Беседа удалена');
+    }
+    renderRooms();
+    if (roomProfileModal.classList.contains('overlay--show') && currentRoom === roomName) closeRoomProfile();
+  }
+      } else if (m.type === 'typing') {
+        if (m.room === currentRoom && m.from !== username) {
+          typingEl.textContent = m.from + ' печатает…';
+          clearTimeout(typingEl._t);
+          typingEl._t = setTimeout(() => typingEl.textContent = '', 1200);
+        }
+      } else if (m.type === 'edited') {
+        updateEditedMessage(m);
+      } else if (m.type === 'deleted') {
+        removeMessage(m);
+      }
+    });
+
+    ws.addEventListener('close', () => {
+      showToast('Соединение с сервером закрыто');
+    });
+  }
+
+  function updateRooms(items) {
+    roomsMeta.clear();
+    items.forEach(it => {
+      roomsMeta.set(it.name, { public:!!it.public, owner:it.owner || null, avatar: it.avatar || null, title: it.title || null, dm: !!it.dm });
+      if (!unread.has(it.name)) unread.set(it.name, 0);
+    });
+    renderRooms();
+  }
+
+  function roomRecordFromMeta(name, meta) {
+    const info = lastMessages.get(name) || {};
+    return {
+      name,
+      public: meta.public,
+      owner: meta.owner,
+      avatar: meta.avatar || null,
+      title: meta.title || name,
+      dm: !!meta.dm,
+      title: meta.title || null,
+      dm: !!meta.dm,
+      preview: info.preview || (meta.public ? 'Групповой чат' : 'Личный чат'),
+      time: info.time || null,
+      unread: unread.get(name) || 0
+    };
+  }
+
+  function renderRooms() {
+    const all = Array.from(roomsMeta.entries()).map(([name, meta]) => roomRecordFromMeta(name, meta));
+    const groups = all.filter(r => r.public);
+    const privates = all.filter(r => !r.public);
+
+    groups.sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+    privates.sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+
+    groupsListEl.innerHTML = '';
+    personalListEl.innerHTML = '';
+
+    function createRoomRow(room) {
+      const el = document.createElement('div');
+      el.className = 'room' + (room.name === currentRoom ? ' room--active' : '');
+      el.dataset.name = room.name;
+
+      const left = document.createElement('div');
+      left.className = 'room-main';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'room-avatar';
+      if (room.avatar) {
+        avatar.style.backgroundImage = 'url(' + room.avatar + ')';
+        avatar.style.backgroundSize = 'cover';
+        avatar.style.backgroundPosition = 'center';
+        avatar.textContent = '';
+      } else {
+        avatar.textContent = ((room.title || room.name) || '?').slice(0,2).toUpperCase();
+      }
+const textWrap = document.createElement('div');
+      textWrap.className = 'room-text';
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'room-name';
+      nameEl.textContent = room.title || room.name;
+
+      const subtitle = document.createElement('div');
+      subtitle.className = 'room-subtitle';
+      subtitle.textContent = room.preview;
+
+      textWrap.appendChild(nameEl);
+      textWrap.appendChild(subtitle);
+
+      left.appendChild(avatar);
+      left.appendChild(textWrap);
+
+      const right = document.createElement('div');
+      right.className = 'room-right';
+
+      if (room.time) {
+        const t = document.createElement('div');
+        t.className = 'room-time';
+        t.textContent = formatTime(room.time);
+        right.appendChild(t);
+      }
+
+      if (!room.public) {
+        const lock = document.createElement('div');
+        lock.className = 'room-lock';
+        lock.textContent = '🔒';
+        right.appendChild(lock);
+      }
+
+      if (room.unread > 0) {
+        const badge = document.createElement('div');
+        badge.className = 'room-unread';
+        badge.textContent = room.unread > 9 ? '9+' : room.unread;
+        right.appendChild(badge);
+      }
+
+      el.appendChild(left);
+      el.appendChild(right);
+
+      el.addEventListener('click', () => selectRoom(room.name));
+
+      return el;
+    }
+
+    groups.forEach(r => groupsListEl.appendChild(createRoomRow(r)));
+    privates.forEach(r => personalListEl.appendChild(createRoomRow(r)));
+  }
+
+  function selectRoom(name) {
+    if (!name) return;
+    cancelEdit();
+    cancelReply();
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type:'join', room:name }));
+    }
+  }
+
+  function updateRoomHeader() {
+    if (!currentRoom) {
+      roomTitleEl.textContent = 'Чат';
+      presenceEl.textContent = 'Онлайн: — / —';
+      if (headerAvatarEl) {
+        headerAvatarEl.style.backgroundImage = '';
+        headerAvatarEl.textContent = '';
+      }
+      return;
+    }
+
+    const meta = roomsMeta.get(currentRoom) || {};
+    roomTitleEl.textContent = meta.title || currentRoom;
+
+    if (headerAvatarEl) {
+      if (meta.avatar) {
+        headerAvatarEl.style.backgroundImage = 'url(' + meta.avatar + ')';
+        headerAvatarEl.style.backgroundSize = 'cover';
+        headerAvatarEl.style.backgroundPosition = 'center';
+        headerAvatarEl.textContent = '';
+      } else {
+        headerAvatarEl.style.backgroundImage = '';
+        headerAvatarEl.textContent = (currentRoom || '?').slice(0,2).toUpperCase();
+      }
+    }
+  }
+
+  function updatePresence(users) {
+    const total = users.length;
+    const online = users.filter(u => u.status === 'online').length;
+    presenceEl.textContent = 'Онлайн: ' + online + ' / ' + total;
+  }
+
+  function storeMessage(msg) {
+    const room = msg.room || currentRoom;
+    if (!room) return;
+    msg.room = room;
+    let arr = messageStore.get(room);
+    if (!arr) {
+      arr = [];
+      messageStore.set(room, arr);
+    }
+    arr.push(JSON.parse(JSON.stringify(msg)));
+  }
+
+  function findStoredMessage(room, id) {
+    const arr = messageStore.get(room) || [];
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i].id === id) return arr[i];
+    }
+    return null;
+  }
+
+  function renderMessage(m) {
+    const roomName = m.room || currentRoom;
+    const row = document.createElement('div');
+    const isMe = m.from === username;
+    row.className = 'message-row ' + (isMe ? 'message-row--me' : 'message-row--other');
+    row.dataset.id = m.id;
+    row.dataset.room = roomName;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble ' + (isMe ? 'message-bubble--me' : 'message-bubble--other');
+
+    if (m.replyTo != null) {
+      const orig = findStoredMessage(roomName, m.replyTo);
+      const replyBlock = document.createElement('div');
+      replyBlock.className = 'message-reply';
+      replyBlock.dataset.replyId = m.replyTo;
+
+      const ra = document.createElement('div');
+      ra.className = 'message-reply-author';
+      ra.textContent = orig && orig.from ? orig.from : 'Ответ на сообщение';
+
+      const rt = document.createElement('div');
+      rt.className = 'message-reply-text';
+      if (orig) {
+        if (orig.deleted) {
+          rt.textContent = 'Сообщение удалено';
+        } else if (orig.type === 'text') {
+          rt.textContent = getMessageText(orig);
+        } else {
+          rt.textContent = orig.name || 'Файл';
+        }
+      } else {
+        rt.textContent = 'Сообщение недоступно';
+      }
+
+      replyBlock.appendChild(ra);
+      replyBlock.appendChild(rt);
+      bubble.appendChild(replyBlock);
+    }
+
+    const textBlock = document.createElement('div');
+    textBlock.className = 'message-text';
+
+    if (m.type === 'text') {
+      const body = getMessageText(m);
+      textBlock.textContent = body;
+    } else if (m.type === 'file') {
+      const url = 'data:' + m.mime + ';base64,' + m.data;
+
+      // Для медиа (фото/видео) не показываем имя файла — только контент
+      if (m.mime && m.mime.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        img.style.maxWidth = '260px';
+        img.style.borderRadius = '10px';
+        img.style.display = 'block';
+        textBlock.appendChild(img);
+      } else if (m.mime && m.mime.startsWith('video/')) {
+        const vid = document.createElement('video');
+        vid.src = url;
+        vid.controls = true;
+        vid.style.maxWidth = '260px';
+        vid.style.borderRadius = '10px';
+        vid.style.display = 'block';
+        textBlock.appendChild(vid);
+      } else {
+        // на будущее: если появятся не-медиа файлы
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = m.name || 'file';
+        link.textContent = m.name || 'Файл';
+        link.target = '_blank';
+        const fileWrap = document.createElement('div');
+        fileWrap.className = 'message-file';
+        fileWrap.appendChild(link);
+        textBlock.appendChild(fileWrap);
+      }
+    }
+
+    bubble.appendChild(textBlock);
+
+    const meta = document.createElement('div');
+    meta.className = 'message-meta';
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'message-meta-time';
+    timeSpan.textContent = formatTime(m.ts);
+    meta.appendChild(timeSpan);
+
+    if (m.edited) {
+      const editedSpan = document.createElement('span');
+      editedSpan.className = 'message-meta-edited';
+      editedSpan.textContent = ' · ред.';
+      meta.appendChild(editedSpan);
+    }
+
+    if (isMe) {
+      const ticks = document.createElement('span');
+      const upTo = getLastReadByOthers(roomName);
+      const read = upTo && Number(m.id || 0) <= upTo;
+      ticks.className = 'msg-ticks ' + (read ? 'msg-ticks--double' : 'msg-ticks--single');
+      meta.appendChild(ticks);
+    }
+
+    bubble.appendChild(meta);
+    row.appendChild(bubble);
+    messagesEl.appendChild(row);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function handleIncomingMessage(m) {
+    const room = m.room;
+    const preview = m.type === 'text'
+      ? getMessageText(m).slice(0, 40)
+      : (m.name || 'Файл');
+
+    lastMessages.set(room, { preview, time:m.ts });
+
+    if (m.from === username) {
+      // outgoing message: ticks are single until we receive read receipts
+    }
+
+storeMessage(m);
+
+    if (room === currentRoom) {
+      renderMessage(m);
+      if (m.from !== username) sendMarkRead(room);
+    } else {
+      unread.set(room, (unread.get(room) || 0) + 1);
+    }
+    renderRooms();
+  }
+
+  function updateEditedMessage(info) {
+    const room = info.room;
+    const body = getMessageText(info);
+    const arr = messageStore.get(room);
+    if (arr) {
+      const msg = arr.find(x => x.id === info.id);
+      if (msg) {
+        msg.text = body;
+        msg.edited = !!info.edited;
+      }
+    }
+
+    if (room === currentRoom) {
+      const row = Array.from(messagesEl.querySelectorAll('.message-row'))
+        .find(r => Number(r.dataset.id) === info.id);
+      if (row) {
+        const textBlock = row.querySelector('.message-text');
+        if (textBlock) textBlock.textContent = body;
+
+        const meta = row.querySelector('.message-meta');
+        if (meta && !meta.querySelector('.message-meta-edited')) {
+          const span = document.createElement('span');
+          span.className = 'message-meta-edited';
+          span.textContent = ' · ред.';
+          meta.appendChild(span);
+        }
+      }
+    }
+    const rec = lastMessages.get(room);
+    if (rec) {
+      rec.preview = body.slice(0, 40);
+      lastMessages.set(room, rec);
+      renderRooms();
+    }
+
+    document.querySelectorAll('.message-reply').forEach(rb => {
+      if (Number(rb.dataset.replyId) === info.id) {
+        const rt = rb.querySelector('.message-reply-text');
+        if (rt) rt.textContent = body;
+      }
+    });
+  }
+
+  function removeMessage(info) {
+    const room = info.room;
+    const arr = messageStore.get(room);
+    if (arr) {
+      const msg = arr.find(x => x.id === info.id);
+      if (msg) {
+        msg.deleted = true;
+        msg.text = '';
+        msg.name = '';
+        msg.data = '';
+        msg.message = '';
+        msg.body = '';
+        msg.content = '';
+        msg.msg = '';
+      }
+    }
+
+    if (room === currentRoom) {
+      const row = Array.from(messagesEl.querySelectorAll('.message-row'))
+        .find(r => Number(r.dataset.id) === info.id);
+      if (row) {
+        row.classList.add('message-deleted');
+        const textBlock = row.querySelector('.message-text');
+        if (textBlock) textBlock.textContent = 'Сообщение удалено';
+      }
+    }
+
+    document.querySelectorAll('.message-reply').forEach(rb => {
+      if (Number(rb.dataset.replyId) === info.id) {
+        const txt = rb.querySelector('.message-reply-text');
+        if (txt) txt.textContent = 'Сообщение удалено';
+      }
+    });
+  }
+
+  /* Редактирование */
+
+  function startEditMessage(id, currentText) {
+    if (!currentRoom) return;
+    editingMessage = { id, room: currentRoom };
+    msgInput.value = currentText;
+    msgInput.focus();
+    editInfo.style.display = 'flex';
+    replyInfo.style.display = 'none';
+    replyContext = null;
+  }
+
+  function cancelEdit() {
+    editingMessage = null;
+    editInfo.style.display = 'none';
+    msgInput.value = '';
+  }
+
+  editCancelBtn.addEventListener('click', () => {
+    cancelEdit();
+  });
+
+  /* Ответ */
+
+  function startReply(msg) {
+    if (msg.deleted) {
+      showToast('Нельзя ответить на удалённое сообщение');
+      return;
+    }
+
+    replyContext = {
+      id: msg.id,
+      room: msg.room || currentRoom,
+      from: msg.from,
+      text: getMessageText(msg) || msg.name || ''
+    };
+    const snip = (replyContext.text || '').trim().replace(/\s+/g,' ');
+    replySnippetEl.textContent = snip.length > 60 ? snip.slice(0,57) + '…' : snip;
+    replyAuthorEl.textContent = replyContext.from || '';
+    replyInfo.style.display = 'flex';
+    editInfo.style.display = 'none';
+    editingMessage = null;
+    msgInput.focus();
+  }
+
+  function cancelReply() {
+    replyContext = null;
+    replyInfo.style.display = 'none';
+  }
+
+  replyCancelBtn.addEventListener('click', () => {
+    cancelReply();
+  });
+
+  /* Отправка сообщений */
+
+  sendBtn.addEventListener('click', () => {
+    if (!currentRoom) {
+      showToast('Выберите беседу слева.');
+      return;
+    }
+    const text = msgInput.value.trim();
+
+    if (!text && !pendingFile) return;
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      if (editingMessage && text && !pendingFile) {
+        ws.send(JSON.stringify({
+          type:'edit_msg',
+          room: editingMessage.room,
+          id: editingMessage.id,
+          text
+        }));
+        cancelEdit();
+        return;
+      }
+
+      const replyToId = replyContext ? replyContext.id : null;
+
+      if (pendingFile) {
+        const file = pendingFile;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const b64 = e.target.result.split(',')[1];
+          const payload = {
+            type:'file',
+            room:currentRoom,
+            name:file.name,
+            mime:file.type,
+            size:file.size,
+            data:b64
+          };
+          if (replyToId != null) payload.replyTo = replyToId;
+          ws.send(JSON.stringify(payload));
+        };
+        reader.readAsDataURL(file);
+        pendingFile = null;
+        fileInfo.style.display = 'none';
+        fileInput.value = '';
+      }
+
+      if (text) {
+        const payload = { type:'text', room:currentRoom, text };
+        if (replyToId != null) payload.replyTo = replyToId;
+        ws.send(JSON.stringify(payload));
+        msgInput.value = '';
+      }
+
+      cancelReply();
+    }
+  });
+
+  msgInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendBtn.click();
+    } else if (e.key === 'Escape') {
+      if (editingMessage) {
+        e.preventDefault();
+        cancelEdit();
+      } else if (replyContext) {
+        e.preventDefault();
+        cancelReply();
+      }
+    } else if (currentRoom && ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type:'typing', room:currentRoom }));
+    }
+  });
+
+  /* Файл */
+
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files && fileInput.files[0];
+    if (!f) {
+      pendingFile = null;
+      fileInfo.style.display = 'none';
+      return;
+    }
+    if (!f.type.startsWith('image/') && !f.type.startsWith('video/')) {
+      showToast('Разрешены только изображения и видео.');
+      fileInput.value = '';
+      return;
+    }
+    if (f.size > MAX_BYTES) {
+      showToast('Файл больше 30 МБ.');
+      fileInput.value = '';
+      return;
+    }
+    pendingFile = f;
+    fileNameEl.textContent = f.name;
+    fileInfo.style.display = 'flex';
+  });
+
+  fileClearBtn.addEventListener('click', () => {
+    pendingFile = null;
+    fileInput.value = '';
+    fileInfo.style.display = 'none';
+  });
+
+  /* Модалка создания беседы */
+
+  const roomModal = document.getElementById('room-modal');
+  const roomNameInput = document.getElementById('room-name-input');
+  const roomPublicInput = document.getElementById('room-public-input');
+
+  function openRoomModal() {
+    roomModal.classList.add('overlay--show');
+    roomNameInput.value = '';
+    roomPublicInput.checked = false;
+    setTimeout(() => roomNameInput.focus(), 0);
+  }
+  function closeRoomModal() {
+    roomModal.classList.remove('overlay--show');
+  }
+
+  document.getElementById('new-room-btn').addEventListener('click', openRoomModal);
+  document.getElementById('room-cancel-btn').addEventListener('click', closeRoomModal);
+  roomModal.addEventListener('click', (e) => {
+    if (e.target === roomModal) closeRoomModal();
+  });
+
+  document.getElementById('room-create-btn').addEventListener('click', () => {
+    const name = roomNameInput.value.trim();
+    const isPublic = roomPublicInput.checked;
+    if (!name) {
+      showToast('Введите название беседы.');
+      return;
+    }
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      if (isPublic) {
+        ws.send(JSON.stringify({ type:'create_room', room:name, public:true }));
+      } else {
+        // личный чат без создания беседы: name = username собеседника
+        ws.send(JSON.stringify({ type:'dm_open', user:name }));
+      }
+    }
+    closeRoomModal();
+  });
+
+  /* Поиск по списку бесед */
+
+  document.getElementById('global-search').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase().trim();
+    document.querySelectorAll('.room').forEach(el => {
+      const name = (el.querySelector('.room-name')?.textContent || '').toLowerCase();
+      const subtitle = (el.querySelector('.room-subtitle')?.textContent || '').toLowerCase();
+      el.style.display = (name.includes(q) || subtitle.includes(q)) ? '' : 'none';
+    });
+  });
+
+  /* Контекстное меню сообщения */
+
+  function openMsgMenu(x, y, msg) {
+    menuMsg = msg;
+    let left = x;
+    let top = y;
+    const docW = document.documentElement.clientWidth;
+    const docH = document.documentElement.clientHeight;
+    const menuW = 190;
+    const menuH = 120;
+    if (left + menuW > docW) left = docW - menuW - 8;
+    if (top + menuH > docH) top = docH - menuH - 8;
+    msgMenu.style.left = left + 'px';
+    msgMenu.style.top = top + 'px';
+
+    const isMe = msg.from === username;
+    const editBtn = msgMenu.querySelector('button[data-action="edit"]');
+    const delBtn = msgMenu.querySelector('button[data-action="delete"]');
+
+    editBtn.style.display = (isMe && msg.type === 'text' && !msg.deleted) ? 'block' : 'none';
+    const canDelete = (!msg.deleted) && (isMe || (isGroupRoom(msg.room || currentRoom) && isRoomAdmin(msg.room || currentRoom)));
+    delBtn.style.display = canDelete ? 'block' : 'none';
+
+    msgMenu.classList.add('msg-menu--show');
+  }
+
+  function closeMsgMenu() {
+    msgMenu.classList.remove('msg-menu--show');
+    menuMsg = null;
+  }
+
+  messagesEl.addEventListener('contextmenu', (ev) => {
+    const row = ev.target.closest('.message-row');
+    if (!row) return;
+    ev.preventDefault();
+    const id = Number(row.dataset.id);
+    const room = row.dataset.room || currentRoom;
+    if (!room || !id) return;
+    const msg = findStoredMessage(room, id);
+    if (!msg) return;
+    openMsgMenu(ev.clientX, ev.clientY, msg);
+  });
+
+  document.addEventListener('click', (ev) => {
+    if (msgMenu.classList.contains('msg-menu--show') && !msgMenu.contains(ev.target)) {
+      closeMsgMenu();
+    }
+  });
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') {
+      closeMsgMenu();
+    }
+  });
+
+  msgMenu.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('button[data-action]');
+    if (!btn || !menuMsg) return;
+    const action = btn.dataset.action;
+    const room = menuMsg.room || currentRoom;
+    const id = menuMsg.id;
+    if (!room || !id) return;
+
+    if (action === 'reply') {
+      startReply(menuMsg);
+    } else if (action === 'edit') {
+      if (menuMsg.from === username && menuMsg.type === 'text') {
+        startEditMessage(id, getMessageText(menuMsg));
+      }
+    } else if (action === 'delete') {
+      const canDelete = (!menuMsg.deleted) && (menuMsg.from === username || (isGroupRoom(room) && isRoomAdmin(room)));
+      if (canDelete && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type:'delete_msg', room:room, id:id }));
+      }
+    }
+    closeMsgMenu();
+  });
+
+  /* Меню чата и инвайт */
+
+  chatMoreBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    chatMenu.classList.toggle('chat-menu--show');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!chatMenu.contains(e.target) && e.target !== chatMoreBtn) {
+      chatMenu.classList.remove('chat-menu--show');
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      chatMenu.classList.remove('chat-menu--show');
+    }
+  });
+
+  const inviteModal = document.getElementById('invite-modal');
+  const inviteCancelBtn = document.getElementById('invite-cancel-btn');
+
+  function openInviteModal() {
+    if (!currentRoom) {
+      showToast('Сначала выберите беседу.');
+      return;
+    }
+    inviteModal.classList.add('overlay--show');
+    const input = document.getElementById('invite-user');
+    input.value = '';
+    setTimeout(() => input.focus(), 0);
+  }
+
+  function closeInviteModal() {
+    inviteModal.classList.remove('overlay--show');
+  }
+
+  inviteCancelBtn.addEventListener('click', closeInviteModal);
+  inviteModal.addEventListener('click', (e) => {
+    if (e.target === inviteModal) closeInviteModal();
+  });
+
+  chatMenu.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === 'profile') {
+      chatMenu.classList.remove('chat-menu--show');
+      openRoomProfile();
+    } else if (action === 'invite') {
+      chatMenu.classList.remove('chat-menu--show');
+      openInviteModal();
+    }
+  });
+
+  document.getElementById('invite-btn').addEventListener('click', () => {
+    const who = document.getElementById('invite-user').value.trim();
+    if (!currentRoom) {
+      showToast('Сначала выберите беседу.');
+      return;
+    }
+    if (!who) return;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type:'invite', room: currentRoom, username: who }));
+    }
+    document.getElementById('invite-user').value = '';
+    closeInviteModal();
+    showToast('Приглашение отправлено');
+  });
+
+  /* Лаборатория */
+
+  const labListEl = document.getElementById('lab-list');
+  const labRecords = [];
+
+  function renderLabs() {
+    labListEl.innerHTML = '';
+    if (!labRecords.length) {
+      const empty = document.createElement('div');
+      empty.className = 'lab-empty';
+      empty.textContent = 'Пока нет записей.';
+      labListEl.appendChild(empty);
+      return;
+    }
+    labRecords.forEach(rec => {
+      const row = document.createElement('div');
+      row.className = 'lab-row';
+      const top = document.createElement('div');
+      top.className = 'lab-row-top';
+
+      const left = document.createElement('div');
+      const title = document.createElement('div');
+      title.className = 'lab-row-title';
+      title.textContent = rec.title;
+      const status = document.createElement('div');
+      status.className = 'lab-row-status';
+      status.textContent = rec.date + ' • Полис пациента: ' + rec.policy;
+      left.appendChild(title);
+      left.appendChild(status);
+
+      const right = document.createElement('div');
+      const chip = document.createElement('span');
+      chip.className = 'lab-chip ' + (rec.chip === 'ready' ? 'lab-chip--ready' : 'lab-chip--wait');
+      chip.textContent = rec.status;
+      right.appendChild(chip);
+
+      top.appendChild(left);
+      top.appendChild(right);
+      row.appendChild(top);
+      labListEl.appendChild(row);
+    });
+  }
+  renderLabs();
+
+  document.getElementById('lab-submit').addEventListener('click', () => {
+    const policy = document.getElementById('lab-policy').value.trim();
+    const tests = document.getElementById('lab-tests').value.trim();
+    const prep = document.getElementById('lab-prep').value.trim();
+    const labName = document.getElementById('lab-lab').value.trim();
+    const dateVal = document.getElementById('lab-date').value;
+
+    if (!policy || !tests || !dateVal) {
+      showToast('Заполните полис, анализы и дату.');
+      return;
+    }
+    const date = new Date(dateVal);
+    const dateStr = date.toLocaleDateString('ru-RU');
+
+    labRecords.unshift({
+      title: tests + ' — ' + labName,
+      date: dateStr,
+      policy: policy,
+      status: prep ? 'Подготовка: ' + prep : 'Запись создана',
+      chip: 'wait'
+    });
+    renderLabs();
+
+    document.getElementById('lab-policy').value = '';
+    document.getElementById('lab-tests').value = '';
+    document.getElementById('lab-prep').value = '';
+    document.getElementById('lab-date').value = '';
+
+    showToast('Пациент записан на анализы');
+  });
+
+  /* Календарь */
+
+  const todayListEl = document.getElementById('today-list');
+  const todayLabel = document.getElementById('today-label');
+  const monthLabelLeft = document.getElementById('month-label-left');
+  const monthLabelMain = document.getElementById('month-label-main');
+  const miniBody = document.getElementById('mini-body');
+  const calBody = document.getElementById('cal-body');
+
+  const today = new Date();
+  let currentYear = today.getFullYear();
+  let currentMonth = today.getMonth();
+  let activeDay = today.getDate();
+  const todayKey = today.toISOString().slice(0,10);
+
+  const monthNamesRu = [
+    'Январь','Февраль','Март','Апрель','Май','Июнь',
+    'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'
+  ];
+
+  let appointments;
+  try {
+    appointments = JSON.parse(localStorage.getItem(APPOINTMENTS_KEY) || '[]');
+  } catch {
+    appointments = [];
+  }
+  if (!Array.isArray(appointments)) appointments = [];
+
+  // убираем возможную старую запись с Ивановым
+  appointments = appointments.filter(a => !(a.patient && a.patient.toLowerCase().includes('иванов')));
+  localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(appointments));
+
+  const activeFilters = { oper:false, staff:false, mine:false };
+  const filterTags = document.querySelectorAll('.calendar-tag');
+  filterTags.forEach(tag => {
+    const key = tag.dataset.filter;
+    tag.classList.toggle('calendar-tag--active', !!activeFilters[key]);
+    tag.addEventListener('click', () => {
+      activeFilters[key] = !activeFilters[key];
+      tag.classList.toggle('calendar-tag--active', activeFilters[key]);
+      renderCalendarAppointments();
+    });
+  });
+
+  function updateCalendarHeader() {
+    const monthName = monthNamesRu[currentMonth];
+    monthLabelLeft.textContent = monthName + ' ' + currentYear;
+    monthLabelMain.textContent = monthName + ', ' + currentYear;
+    todayLabel.textContent = 'Сегодня ' + today.toLocaleDateString('ru-RU');
+  }
+
+  function buildCalendars() {
+    miniBody.innerHTML = '';
+    calBody.innerHTML = '';
+
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    const startIndexMon = (firstDay.getDay() + 6) % 7;
+    const totalCellsMon = Math.ceil((startIndexMon + daysInMonth) / 7) * 7;
+    let day = 1;
+    for (let i = 0; i < totalCellsMon; i++) {
+      if (i % 7 === 0) {
+        var tr = document.createElement('tr');
+        miniBody.appendChild(tr);
+      }
+      const td = document.createElement('td');
+      if (i >= startIndexMon && day <= daysInMonth) {
+        td.textContent = day;
+        td.className = 'mini-day';
+        td.dataset.day = String(day);
+        day++;
+      }
+      tr.appendChild(td);
+    }
+
+    const startIndexSun = firstDay.getDay();
+    const totalCellsSun = Math.ceil((startIndexSun + daysInMonth) / 7) * 7;
+    day = 1;
+    for (let i = 0; i < totalCellsSun; i++) {
+      if (i % 7 === 0) {
+        var tr2 = document.createElement('tr');
+        calBody.appendChild(tr2);
+      }
+      const td = document.createElement('td');
+      if (i >= startIndexSun && day <= daysInMonth) {
+        td.dataset.day = String(day);
+        const num = document.createElement('div');
+        num.className = 'cal-day-num';
+        num.textContent = day;
+        const events = document.createElement('div');
+        events.className = 'cal-events';
+        td.appendChild(num);
+        td.appendChild(events);
+        day++;
+      }
+      tr2.appendChild(td);
+    }
+
+    document.querySelectorAll('.calendar-grid td[data-day]').forEach(td => {
+      td.addEventListener('click', () => {
+        activeDay = Number(td.dataset.day);
+        applyActiveDayHighlight();
+      });
+    });
+    document.querySelectorAll('.mini-month .mini-day').forEach(td => {
+      td.addEventListener('click', () => {
+        activeDay = Number(td.dataset.day);
+        applyActiveDayHighlight();
+      });
+    });
+
+    applyActiveDayHighlight();
+  }
+
+  function applyActiveDayHighlight() {
+    document.querySelectorAll('.calendar-grid td[data-day]').forEach(td => {
+      td.classList.toggle('cal-active', Number(td.dataset.day) === activeDay);
+    });
+    document.querySelectorAll('.mini-month .mini-day').forEach(td => {
+      td.classList.toggle('mini-active', Number(td.dataset.day) === activeDay);
+    });
+  }
+
+  function renderCalendarAppointments() {
+    document.querySelectorAll('.cal-events').forEach(el => el.innerHTML = '');
+    todayListEl.innerHTML = '';
+
+    const visibleForGrid = appointments.filter(a => activeFilters[a.type]);
+
+    visibleForGrid.forEach(app => {
+      const d = new Date(app.date);
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const day = d.getDate();
+
+      if (year === currentYear && month === currentMonth) {
+        const cellEvents = document.querySelector('td[data-day="' + day + '"] .cal-events');
+        if (cellEvents) {
+          const ev = document.createElement('div');
+          let cls = 'cal-event';
+          if (app.type === 'oper') cls += ' cal-event--blue';
+          if (app.type === 'staff') cls += ' cal-event--staff';
+          ev.className = cls;
+          ev.textContent = app.time + ' ' + app.room + ' — ' + app.patient;
+          cellEvents.appendChild(ev);
+        }
+      }
+    });
+
+    appointments.forEach(app => {
+      if (app.date === todayKey) {
+        const li = document.createElement('li');
+        li.textContent = app.time + ' — ' + app.room + ' ' + app.patient;
+        todayListEl.appendChild(li);
+      }
+    });
+
+    applyActiveDayHighlight();
+  }
+
+  document.getElementById('month-prev').addEventListener('click', () => {
+    currentMonth -= 1;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear -= 1;
+    }
+    updateCalendarHeader();
+    buildCalendars();
+    renderCalendarAppointments();
+  });
+
+  document.getElementById('month-next').addEventListener('click', () => {
+    currentMonth += 1;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear += 1;
+    }
+    updateCalendarHeader();
+    buildCalendars();
+    renderCalendarAppointments();
+  });
+
+  const visitModal = document.getElementById('visit-modal');
+  const visitPatient = document.getElementById('visit-patient');
+  const visitRoom = document.getElementById('visit-room');
+  const visitDate = document.getElementById('visit-date');
+  const visitTimeFrom = document.getElementById('visit-time-from');
+
+  function openVisitModal() {
+    visitModal.classList.add('overlay--show');
+    visitPatient.value = '';
+    visitRoom.value = '';
+    visitDate.value = todayKey;
+    visitTimeFrom.value = '';
+    setTimeout(() => visitPatient.focus(), 0);
+  }
+  function closeVisitModal() {
+    visitModal.classList.remove('overlay--show');
+  }
+
+  document.getElementById('add-visit-btn').addEventListener('click', openVisitModal);
+  document.getElementById('visit-cancel-btn').addEventListener('click', closeVisitModal);
+  visitModal.addEventListener('click', (e) => {
+    if (e.target === visitModal) closeVisitModal();
+  });
+
+  document.getElementById('visit-save-btn').addEventListener('click', () => {
+    const patient = visitPatient.value.trim();
+    const room = visitRoom.value.trim();
+    const dateStr = visitDate.value;
+    const time = visitTimeFrom.value;
+
+    if (!patient || !room || !dateStr || !time) {
+      showToast('Заполните ФИО, кабинет, дату и время.');
+      return;
+    }
+
+    appointments.push({
+      patient,
+      room,
+      date: dateStr,
+      time,
+      type:'mine'
+    });
+    localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(appointments));
+    renderCalendarAppointments();
+    closeVisitModal();
+    showToast('Пациент записан в календарь');
+  });
+
+  updateCalendarHeader();
+  buildCalendars();
+  renderCalendarAppointments();
+
+  /* Профиль */
+
+  const profileNameHeader = document.getElementById('profile-name-header');
+  const profileRoleHeader = document.getElementById('profile-role-header');
+
+  const profileName = document.getElementById('profile-name');
+  const profileRole = document.getElementById('profile-role');
+  const profileDept = document.getElementById('profile-dept');
+  const profilePhone = document.getElementById('profile-phone');
+  const profileEmail = document.getElementById('profile-email');
+  const profileNotes = document.getElementById('profile-notes');
+
+  function loadProfile() {
+    let prof;
+    try {
+      prof = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
+    } catch {
+      prof = {};
+    }
+    profileName.value = prof.name || username;
+    profileRole.value = prof.role || '';
+    profileDept.value = prof.dept || '';
+    profilePhone.value = prof.phone || '';
+    profileEmail.value = prof.email || '';
+    profileNotes.value = prof.notes || '';
+
+    profileNameHeader.textContent = profileName.value || 'Профиль пользователя';
+    profileRoleHeader.textContent = profileRole.value || 'Медицинский работник';
+    if (!localStorage.getItem(AVATAR_KEY)) {
+      profileAvatar.textContent = (profileName.value || username || 'DR').slice(0,2).toUpperCase();
+    }
+  }
+
+  loadProfile();
+
+  document.getElementById('profile-save-btn').addEventListener('click', () => {
+    const data = {
+      name: profileName.value.trim(),
+      role: profileRole.value.trim(),
+      dept: profileDept.value.trim(),
+      phone: profilePhone.value.trim(),
+      email: profileEmail.value.trim(),
+      notes: profileNotes.value.trim()
+    };
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(data));
+    loadProfile();
+    showToast('Профиль сохранён');
+  });
+
+  document.getElementById('profile-close-btn').addEventListener('click', () => {
+    setScreen('chat');
+  });
+
+  /* Профиль беседы */
+
+const roomProfileModal = document.getElementById('room-profile-modal');
+const roomProfileAvatar = document.getElementById('room-profile-avatar');
+const roomProfileTitle = document.getElementById('room-profile-title');
+const roomProfileSub = document.getElementById('room-profile-sub');
+const roomProfileActions = document.getElementById('room-profile-actions');
+
+const roomProfileMedia = document.getElementById('room-profile-media');
+const roomProfileLinks = document.getElementById('room-profile-links');
+const roomProfileFiles = document.getElementById('room-profile-files');
+
+const roomProfileCloseBtn = document.getElementById('room-profile-close-btn');
+const roomProfileRenameBtn = document.getElementById('room-profile-rename-btn');
+const roomProfileAvatarBtn = document.getElementById('room-profile-avatar-btn');
+const roomProfileDeleteBtn = document.getElementById('room-profile-delete-btn');
+const roomAvatarInput = document.getElementById('room-avatar-input');
+
+const roomRenameModal = document.getElementById('room-rename-modal');
+const roomRenameInput = document.getElementById('room-rename-input');
+const roomRenameSaveBtn = document.getElementById('room-rename-save-btn');
+const roomRenameCancelBtn = document.getElementById('room-rename-cancel-btn');
+
+let roomProfileTab = 'media';
+
+function roomInitials(name) {
+  const s = String(name || '').trim();
+  if (!s) return 'CH';
+  const parts = s.split(/\s+/).filter(Boolean);
+  const a = (parts[0] || '').slice(0, 1);
+  const b = (parts[1] || '').slice(0, 1);
+  return (a + b).toUpperCase() || s.slice(0, 2).toUpperCase();
+}
+
+function getRoomDisplayTitle(room) {
+  const meta = roomsMeta.get(room) || {};
+  return meta.title || room;
+}
+
+function getRoomAvatar(room) {
+  const meta = roomsMeta.get(room) || {};
+  return meta.avatar || null;
+}
+
+function openRoomProfile() {
+  if (!currentRoom) return;
+  roomProfileModal.classList.add('overlay--show');
+  roomProfileTab = 'media';
+  document.querySelectorAll('#room-profile-modal .room-profile-tab').forEach(b => {
+    b.classList.toggle('room-profile-tab--active', b.dataset.tab === 'media');
+  });
+  document.querySelectorAll('#room-profile-modal .room-profile-pane').forEach(p => {
+    p.classList.toggle('room-profile-pane--active', p.dataset.pane === 'media');
+  });
+
+  // Request up-to-date info from server (if supported)
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type:'room_info', room: currentRoom }));
+  }
+  renderRoomProfile();
+}
+
+function closeRoomProfile() {
+  roomProfileModal.classList.remove('overlay--show');
+}
+
+roomProfileCloseBtn.addEventListener('click', closeRoomProfile);
+roomProfileModal.addEventListener('click', (e) => { if (e.target === roomProfileModal) closeRoomProfile(); });
+
+function openRoomRenameModal() {
+  if (!currentRoom) return;
+  roomRenameModal.classList.add('overlay--show');
+  roomRenameInput.value = getRoomDisplayTitle(currentRoom) || '';
+  setTimeout(() => roomRenameInput.focus(), 0);
+}
+function closeRoomRenameModal() { roomRenameModal.classList.remove('overlay--show'); }
+roomRenameCancelBtn.addEventListener('click', closeRoomRenameModal);
+roomRenameModal.addEventListener('click', (e) => { if (e.target === roomRenameModal) closeRoomRenameModal(); });
+
+roomRenameSaveBtn.addEventListener('click', () => {
+  const title = roomRenameInput.value.trim();
+  if (!currentRoom || !title) return;
+  if (!isRoomAdmin(currentRoom)) { showToast('Недостаточно прав'); return; }
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type:'rename_room', room: currentRoom, title }));
+  }
+  closeRoomRenameModal();
+});
+
+roomProfileRenameBtn.addEventListener('click', () => {
+  if (!currentRoom) return;
+  if (!isRoomAdmin(currentRoom)) { showToast('Недостаточно прав'); return; }
+  openRoomRenameModal();
+});
+
+roomProfileAvatarBtn.addEventListener('click', () => {
+  if (!currentRoom) return;
+  if (!isRoomAdmin(currentRoom)) { showToast('Недостаточно прав'); return; }
+  roomAvatarInput.click();
+});
+
+roomAvatarInput.addEventListener('change', () => {
+  const file = roomAvatarInput.files && roomAvatarInput.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('Можно выбрать только изображение');
+    roomAvatarInput.value = '';
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('Файл изображения больше 5 МБ');
+    roomAvatarInput.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type:'set_room_avatar', room: currentRoom, avatar: dataUrl }));
+    }
+    roomAvatarInput.value = '';
+  };
+  reader.readAsDataURL(file);
+});
+
+roomProfileDeleteBtn.addEventListener('click', () => {
+  if (!currentRoom) return;
+  if (!isRoomAdmin(currentRoom)) { showToast('Недостаточно прав'); return; }
+  if (!confirm('Удалить беседу без возможности восстановления?')) return;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type:'delete_room', room: currentRoom }));
+  }
+  closeRoomProfile();
+});
+
+document.querySelectorAll('#room-profile-modal .room-profile-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    roomProfileTab = btn.dataset.tab;
+    document.querySelectorAll('#room-profile-modal .room-profile-tab').forEach(b => {
+      b.classList.toggle('room-profile-tab--active', b === btn);
+    });
+    document.querySelectorAll('#room-profile-modal .room-profile-pane').forEach(p => {
+      p.classList.toggle('room-profile-pane--active', p.dataset.pane === roomProfileTab);
+    });
+    renderRoomArchives(roomProfileTab);
+  });
+});
+
+function extractLinksFromText(text) {
+  const s = String(text || '');
+  const re = /https?:\/\/[^\s<>"']+/g;
+  const out = [];
+  let m;
+  while ((m = re.exec(s)) !== null) out.push(m[0]);
+  return out;
+}
+
+function renderRoomProfile() {
+  if (!currentRoom) return;
+
+  const meta = roomsMeta.get(currentRoom) || {};
+  const title = getRoomDisplayTitle(currentRoom);
+  const isGroup = !!meta.public;
+  const owner = meta.owner || '';
+  const members = Array.isArray(meta.members) ? meta.members : [];
+
+  roomProfileTitle.textContent = title || currentRoom;
+
+  if (isGroup) {
+    const memCount = members.length ? members.length : '';
+    roomProfileSub.textContent = 'Групповой чат' + (owner ? ' • Администратор: ' + owner : '') + (memCount ? ' • Участников: ' + memCount : '');
+  } else {
+    roomProfileSub.textContent = 'Личный чат';
+  }
+
+  const avatar = getRoomAvatar(currentRoom);
+  if (avatar) {
+    roomProfileAvatar.style.backgroundImage = 'url(' + avatar + ')';
+    roomProfileAvatar.textContent = '';
+  } else {
+    roomProfileAvatar.style.backgroundImage = '';
+    roomProfileAvatar.textContent = roomInitials(title || currentRoom);
+  }
+
+  roomProfileActions.style.display = (isRoomAdmin(currentRoom) ? 'flex' : 'none');
+  renderRoomArchives(roomProfileTab);
+}
+
+function renderRoomArchives(tab) {
+  if (!currentRoom) return;
+
+  const msgs = messageStore.get(currentRoom) || [];
+  const notDeleted = msgs.filter(m => m && !m.deleted);
+
+  if (tab === 'media') {
+    const items = notDeleted.filter(m => m.type === 'file' && m.mime && (m.mime.startsWith('image/') || m.mime.startsWith('video/')));
+    if (!items.length) {
+      roomProfileMedia.innerHTML = '<div class="room-archive-empty">Нет медиа</div>';
+      return;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'room-archive-grid';
+    items.slice().reverse().forEach(m => {
+      const url = 'data:' + m.mime + ';base64,' + m.data;
+      const box = document.createElement('div');
+      box.className = 'room-archive-item';
+      if (m.mime.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = m.name || '';
+        box.appendChild(img);
+      } else {
+        const v = document.createElement('video');
+        v.src = url;
+        v.controls = true;
+        box.appendChild(v);
+      }
+      box.addEventListener('click', () => window.open(url, '_blank'));
+      grid.appendChild(box);
+    });
+    roomProfileMedia.innerHTML = '';
+    roomProfileMedia.appendChild(grid);
+    return;
+  }
+
+  if (tab === 'links') {
+    const allLinks = [];
+    notDeleted.forEach(m => {
+      if (m.type !== 'text') return;
+      extractLinksFromText(getMessageText(m)).forEach(url => allLinks.push({ url, ts: m.ts || 0 }));
+    });
+    if (!allLinks.length) {
+      roomProfileLinks.innerHTML = '<div class="room-archive-empty">Нет ссылок</div>';
+      return;
+    }
+    const list = document.createElement('div');
+    list.className = 'room-archive-list';
+    allLinks.slice().reverse().forEach(x => {
+      const row = document.createElement('div');
+      row.className = 'room-archive-link';
+      const a = document.createElement('a');
+      a.href = x.url;
+      a.target = '_blank';
+      a.rel = 'noreferrer';
+      a.textContent = x.url;
+      const meta = document.createElement('div');
+      meta.className = 'room-archive-meta';
+      meta.textContent = x.ts ? formatTime(x.ts) : '';
+      row.appendChild(a);
+      row.appendChild(meta);
+      list.appendChild(row);
+    });
+    roomProfileLinks.innerHTML = '';
+    roomProfileLinks.appendChild(list);
+    return;
+  }
+
+  if (tab === 'files') {
+    const items = notDeleted.filter(m => m.type === 'file');
+    if (!items.length) {
+      roomProfileFiles.innerHTML = '<div class="room-archive-empty">Нет файлов</div>';
+      return;
+    }
+    const list = document.createElement('div');
+    list.className = 'room-archive-list';
+    items.slice().reverse().forEach(m => {
+      const url = 'data:' + m.mime + ';base64,' + m.data;
+      const row = document.createElement('div');
+      row.className = 'room-archive-file';
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.download = m.name || 'file';
+      a.textContent = m.name || 'Файл';
+      const meta = document.createElement('div');
+      meta.className = 'room-archive-meta';
+      meta.textContent = m.ts ? formatTime(m.ts) : '';
+      row.appendChild(a);
+      row.appendChild(meta);
+      list.appendChild(row);
+    });
+    roomProfileFiles.innerHTML = '';
+    roomProfileFiles.appendChild(list);
+  }
+}
+
+connectWs();
+</script>
+</body>
+</html>

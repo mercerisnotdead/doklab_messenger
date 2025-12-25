@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Доклаб — вход</title>
+  <style>
+    :root {
+      --green:#7bb74a;
+      --green-dark:#68a13e;
+      --blue:#48a9ff;
+      --bg:#e9f2ff;
+      --text:#1f2933;
+      --muted:#6b7280;
+      --border:#d1d5db;
+    }
+    * { box-sizing:border-box; }
+    html,body { height:100%; margin:0; }
+    body {
+      font:16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      background:var(--bg);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .shell {
+      width:100%;
+      max-width:1120px;
+      height:600px;
+      max-height:100%;
+      background:#fff;
+      border-radius:24px;
+      overflow:hidden;
+      box-shadow:0 20px 60px rgba(15,23,42,.18);
+      display:grid;
+      grid-template-columns:minmax(0, 1.05fr) minmax(0, 1fr);
+    }
+    @media (max-width:840px){
+      .shell { grid-template-columns:1fr; height:auto; }
+      .promo { display:none; }
+    }
+
+    /* левая колонка — форма */
+    .form-wrap {
+      padding:40px 48px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    h1 {
+      margin:0 0 8px;
+      font-size:30px;
+      font-weight:700;
+      color:var(--text);
+    }
+    .subtitle {
+      margin:0 0 28px;
+      color:var(--muted);
+      font-size:15px;
+    }
+    .field {
+      display:grid;
+      gap:6px;
+      margin-bottom:16px;
+    }
+    label {
+      font-size:14px;
+      color:#4b5563;
+    }
+    input[type="text"],
+    input[type="password"] {
+      font:inherit;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#f9fafb;
+      color:var(--text);
+      outline:none;
+      transition:border-color .15s, box-shadow .15s, background .15s;
+    }
+    input:focus {
+      border-color:var(--blue);
+      box-shadow:0 0 0 1px rgba(72,169,255,.25);
+      background:#fff;
+    }
+
+    .row-top {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin:4px 0 20px;
+      font-size:14px;
+      color:var(--muted);
+    }
+    .row-top label {
+      display:flex;
+      align-items:center;
+      gap:6px;
+      cursor:pointer;
+      font-size:14px;
+      color:var(--muted);
+      margin:0;
+    }
+    #remember {
+      width:16px; height:16px;
+      border-radius:4px;
+    }
+    .row-top a {
+      text-decoration:none;
+      color:#2563eb;
+      font-size:14px;
+    }
+    .row-top a:hover { text-decoration:underline; }
+
+    .row-buttons {
+      display:flex;
+      gap:12px;
+      margin-top:8px;
+    }
+    button {
+      flex:1;
+      font:inherit;
+      padding:12px;
+      border-radius:999px;
+      border:0;
+      cursor:pointer;
+      transition:background .15s, box-shadow .15s, transform .05s;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+    }
+    #login-btn {
+      background:var(--green);
+      color:#fff;
+      box-shadow:0 10px 25px rgba(123,183,74,.35);
+    }
+    #login-btn:hover { background:var(--green-dark); }
+    #login-btn:active { transform:translateY(1px); box-shadow:0 6px 18px rgba(123,183,74,.4); }
+
+    #register-btn {
+      background:#edf2ff;
+      color:#374151;
+    }
+    #register-btn:hover { background:#e0e7ff; }
+
+    .bottom-line {
+      margin-top:18px;
+      font-size:14px;
+      color:var(--muted);
+    }
+    .bottom-line a {
+      color:#2563eb;
+      text-decoration:none;
+    }
+    .bottom-line a:hover { text-decoration:underline; }
+
+    .msg {
+      margin-top:12px;
+      min-height:20px;
+      font-size:14px;
+      color:#ef4444;
+    }
+
+    /* правая колонка — промо */
+    .promo {
+      position:relative;
+      background:linear-gradient(160deg, var(--blue) 0%, #4fd1c5 40%, var(--green) 100%);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:32px;
+    }
+    .promo-card {
+      max-width:360px;
+      text-align:center;
+    }
+    .logo-circle {
+      width:96px; height:96px;
+      border-radius:999px;
+      margin:0 auto 18px;
+      background:radial-gradient(circle at 30% 20%, #ffffff 0, #c4f1ff 40%, rgba(255,255,255,.1) 65%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+    }
+    .logo-bubble-main {
+      width:54px; height:46px;
+      border-radius:24px;
+      background:#48b1ff;
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:0 10px 26px rgba(15,23,42,.35);
+    }
+    .logo-bubble-main::after {
+      content:"";
+      position:absolute;
+      bottom:-8px; left:18px;
+      width:14px; height:14px;
+      border-radius:50%;
+      background:#48b1ff;
+    }
+    .logo-dots {
+      display:flex;
+      gap:5px;
+    }
+    .logo-dots span {
+      width:6px; height:6px;
+      border-radius:999px;
+      background:#e0f2ff;
+    }
+    .logo-secondary {
+      position:absolute;
+      right:6px; bottom:4px;
+      width:40px; height:36px;
+      border-radius:20px;
+      background:#7dd36b;
+      opacity:.95;
+    }
+    .promo-name {
+      font-size:26px;
+      font-weight:800;
+      letter-spacing:.06em;
+      margin-bottom:6px;
+    }
+    .promo-title {
+      font-size:22px;
+      font-weight:700;
+      margin-bottom:8px;
+    }
+    .promo-text {
+      font-size:14px;
+      line-height:1.5;
+      opacity:.94;
+      margin-bottom:18px;
+    }
+    .promo-pill {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:12px;
+      padding:6px 12px;
+      border-radius:999px;
+      background:rgba(15,23,42,.18);
+      backdrop-filter:blur(6px);
+    }
+    .promo-pill-dot {
+      width:10px; height:10px;
+      border-radius:999px;
+      background:#22c55e;
+      box-shadow:0 0 0 4px rgba(34,197,94,.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="form-wrap">
+      <h1>Добро пожаловать</h1>
+      <p class="subtitle">Войдите в систему внутренней коммуникации для медперсонала «Доклаб».</p>
+
+      <div class="field">
+        <label for="u">Почта</label>
+        <input id="u" type="text" placeholder="Введите почту" autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="p">Пароль</label>
+        <input id="p" type="password" placeholder="Введите пароль" autocomplete="current-password">
+      </div>
+
+      <div class="row-top">
+        <label>
+          <input id="remember" type="checkbox" checked>
+          <span>Запомнить меня</span>
+        </label>
+        <a href="#" id="forgot-link">Забыли пароль?</a>
+      </div>
+
+      <div class="row-buttons">
+        <button id="login-btn">Войти</button>
+        <button id="register-btn">Зарегистрироваться</button>
+      </div>
+
+      <div class="bottom-line">
+        Еще нет аккаунта? <a href="#" id="register-link">Зарегистрироваться</a>
+      </div>
+
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="promo">
+      <div class="promo-card">
+        <div class="logo-circle">
+          <div class="logo-bubble-main">
+            <div class="logo-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="logo-secondary"></div>
+        </div>
+        <div class="promo-name">ДОКЛАБ</div>
+        <div class="promo-title">Система внутренней коммуникации</div>
+        <p class="promo-text">
+          Назначения, результаты анализов, смены и экстренные обсуждения —
+          все в одном защищённом мессенджере.
+        </p>
+        <div class="promo-pill">
+          <span class="promo-pill-dot"></span>
+          <span>Онлайн: медперсонал на смене</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const msg = document.getElementById('msg');
+  const uEl = document.getElementById('u');
+  const pEl = document.getElementById('p');
+
+  function connectAndAuth(type) {
+    msg.textContent = 'Соединяюсь с сервером...';
+    const host = location.hostname || '127.0.0.1';
+    const scheme = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const url = scheme + host + ':8765';
+    const ws = new WebSocket(url);
+
+    ws.addEventListener('open', () => {
+      ws.send(JSON.stringify({
+        type,
+        username: uEl.value.trim(),
+        password: pEl.value
+      }));
+    });
+
+    ws.addEventListener('message', (ev) => {
+      let data;
+      try { data = JSON.parse(ev.data); } catch { return; }
+      if (data.type === 'auth_ok') {
+        // запоминаем пользователя
+        localStorage.setItem('chat_user', uEl.value.trim());
+        localStorage.setItem('chat_pass', pEl.value);
+        ws.close();
+        location.href = 'index.html';
+      } else if (data.type === 'error') {
+        msg.textContent = 'Ошибка: ' + (data.text || '');
+      } else if (data.type === 'system') {
+        msg.textContent = data.text || '';
+      }
+    });
+
+    ws.addEventListener('close', () => {
+      if (!msg.textContent) {
+        msg.textContent = 'Соединение закрыто сервером.';
+      }
+    });
+  }
+
+  document.getElementById('login-btn').addEventListener('click', () => {
+    if (!uEl.value.trim() || !pEl.value) {
+      msg.textContent = 'Введите почту и пароль.';
+      return;
+    }
+    connectAndAuth('login');
+  });
+
+  function startRegister() {
+    if (!uEl.value.trim() || !pEl.value) {
+      msg.textContent = 'Введите почту и пароль для регистрации.';
+      return;
+    }
+    connectAndAuth('register');
+  }
+
+  document.getElementById('register-btn').addEventListener('click', startRegister);
+  document.getElementById('register-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    startRegister();
+  });
+
+  document.getElementById('forgot-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    msg.textContent = 'Обратитесь к администратору для восстановления доступа.';
+  });
+
+  pEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('login-btn').click();
+    }
+  });
+</script>
+</body>
+</html>
