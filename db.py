@@ -23,12 +23,18 @@ from sqlalchemy.sql import func
 
 # Строка подключения к PostgreSQL
 # Можно переопределить через переменную окружения DATABASE_URL
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://chat:chat@localhost:5432/chatdb",
-)
+RAW_DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://chat:chat@localhost:5432/chatdb")
+# Render и многие хостинги выдают URL в формате postgres:// или postgresql://
+if RAW_DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = "postgresql+asyncpg://" + RAW_DATABASE_URL[len("postgres://"):]
+elif RAW_DATABASE_URL.startswith("postgresql://") and not RAW_DATABASE_URL.startswith("postgresql+asyncpg://"):
+    DATABASE_URL = "postgresql+asyncpg://" + RAW_DATABASE_URL[len("postgresql://"):]
+else:
+    DATABASE_URL = RAW_DATABASE_URL
 
-engine = create_async_engine(DATABASE_URL, echo=True, future=True)
+# В продакшене SQL echo лучше выключать; при необходимости включите SQL_ECHO=1
+SQL_ECHO = os.getenv("SQL_ECHO", "").strip() not in ("", "0", "false", "False")
+engine = create_async_engine(DATABASE_URL, echo=SQL_ECHO, future=True)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 Base = declarative_base()
@@ -148,22 +154,9 @@ class Appointment(Base):
 
 
 async def init_db() -> None:
-    """Создаёт таблицы, если их ещё нет, и дефолтную комнату 'Общий чат'."""
+    """Создаёт таблицы, если их ещё нет."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-    # создаём дефолтную комнату при первом запуске
-    async with AsyncSessionLocal() as session:
-        from sqlalchemy import select
-
-        res = await session.execute(
-            select(Room).where(Room.is_direct.is_(False), Room.name == "Общий чат")
-        )
-        room = res.scalar_one_or_none()
-        if room is None:
-            room = Room(name="Общий чат", is_direct=False)
-            session.add(room)
-            await session.commit()
 
 
 async def get_session() -> AsyncSession:
