@@ -6,8 +6,8 @@
   <title>Доклаб — мессенджер</title>
   <style>
     :root {
-      --green:#7bb74a;
-      --green-dark:#69a03f;
+      --green:#92B14F;
+      --green-dark:#92B14F;
       --blue:#48a9ff;
       --bg:#e9f2ff;
       --bg-soft:#f3f4ff;
@@ -1208,7 +1208,41 @@
     @keyframes toastOut {
       to { opacity:0; transform:translateY(6px); }
     }
-  </style>
+  /* Профиль беседы */
+.room-profile-modal { max-width: 640px; }
+.room-profile-top { display:flex; gap:14px; align-items:center; }
+.room-profile-avatar {
+  width:64px; height:64px; border-radius:16px;
+  background:#e9eef8; color:#1b2a49;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:20px; flex:0 0 auto;
+  background-size:cover; background-position:center;
+}
+.room-profile-title { font-size:18px; font-weight:700; }
+.room-profile-sub { margin-top:4px; color:#6b7280; font-size:13px; }
+.room-profile-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+.room-profile-tabs { display:flex; gap:8px; margin-top:14px; border-bottom:1px solid rgba(0,0,0,.08); padding-bottom:8px; }
+.room-profile-tab {
+  border:0; background:transparent; padding:8px 10px;
+  border-radius:10px; cursor:pointer; color:#1f2937;
+}
+.room-profile-tab--active { background:#eef2ff; }
+.room-profile-content { margin-top:12px; max-height:420px; overflow:auto; }
+.room-profile-pane { display:none; }
+.room-profile-pane--active { display:block; }
+.room-archive-empty { color:#6b7280; font-size:13px; padding:10px 0; }
+.room-archive-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; }
+.room-archive-item { border-radius:12px; overflow:hidden; background:#f3f4f6; cursor:pointer; }
+.room-archive-item img, .room-archive-item video { width:100%; height:100%; object-fit:cover; display:block; }
+.room-archive-list { display:flex; flex-direction:column; gap:8px; }
+.room-archive-link, .room-archive-file {
+  display:flex; justify-content:space-between; gap:10px;
+  padding:10px 12px; border-radius:12px; background:#f3f4f6;
+}
+.room-archive-link a, .room-archive-file a { color:#1b2a49; text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.room-archive-meta { color:#6b7280; font-size:12px; flex:0 0 auto; }
+
+</style>
 </head>
 <body>
 <div class="app">
@@ -1281,15 +1315,19 @@
 
             <div id="chat-panel" class="chat-panel" style="display:none;">
               <div class="chat-header">
-                <div>
-                  <div id="room-title">Чат</div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div id="chat-room-avatar" class="room-avatar" style="width:40px;height:40px;font-size:16px;"></div>
+                  <div>
+                    <div id="room-title">Чат</div>
                   <div class="room-subline">
                     <span id="presence">Онлайн: — / —</span>
+                  </div>
                   </div>
                 </div>
                 <div class="chat-header-actions">
                   <button id="chat-more-btn" class="chat-more-btn" title="Опции чата">⋯</button>
                   <div id="chat-menu" class="chat-menu">
+                    <button type="button" data-action="profile">Профиль беседы</button>
                     <button type="button" data-action="invite">Инвайт в беседу</button>
                   </div>
                 </div>
@@ -1476,6 +1514,57 @@
   </div>
 </div>
 
+<!-- Профиль беседы -->
+<div class="overlay" id="room-profile-modal">
+  <div class="modal room-profile-modal">
+    <div class="room-profile-top">
+      <div class="room-profile-avatar" id="room-profile-avatar">CH</div>
+      <div class="room-profile-top-main">
+        <div class="room-profile-title" id="room-profile-title">Беседа</div>
+        <div class="room-profile-sub" id="room-profile-sub">—</div>
+      </div>
+    </div>
+
+    <div class="room-profile-actions" id="room-profile-actions" style="display:none;">
+      <button class="btn-primary" id="room-profile-rename-btn" type="button">Изменить название</button>
+      <button class="btn-primary" id="room-profile-avatar-btn" type="button">Аватар</button>
+      <button class="btn-primary" id="room-profile-delete-btn" type="button">Удалить беседу</button>
+      <input id="room-avatar-input" type="file" accept="image/*" style="display:none;" />
+    </div>
+
+    <div class="room-profile-tabs">
+      <button type="button" class="room-profile-tab room-profile-tab--active" data-tab="media">Медиа</button>
+      <button type="button" class="room-profile-tab" data-tab="links">Ссылки</button>
+      <button type="button" class="room-profile-tab" data-tab="files">Файлы</button>
+    </div>
+
+    <div class="room-profile-content">
+      <div class="room-profile-pane room-profile-pane--active" data-pane="media" id="room-profile-media"></div>
+      <div class="room-profile-pane" data-pane="links" id="room-profile-links"></div>
+      <div class="room-profile-pane" data-pane="files" id="room-profile-files"></div>
+    </div>
+
+    <div class="modal-row">
+      <button class="btn-primary" id="room-profile-close-btn" type="button">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка переименования беседы -->
+<div class="overlay" id="room-rename-modal">
+  <div class="modal">
+    <h3>Изменить название</h3>
+    <div class="field">
+      <label for="room-rename-input">Название</label>
+      <input id="room-rename-input" placeholder="Новое название" />
+    </div>
+    <div class="modal-row">
+      <button class="btn-primary" id="room-rename-save-btn" type="button">Сохранить</button>
+      <button class="btn-secondary" id="room-rename-cancel-btn" type="button">Отмена</button>
+    </div>
+  </div>
+</div>
+
 <!-- Модалка новой беседы -->
 <div class="overlay" id="room-modal">
   <div class="modal">
@@ -1551,27 +1640,18 @@
 </div>
 
 <script>
-  const MAX_BYTES = 30 * 1024 * 1024;
+  const MAX_BYTES = 100 * 1024 * 1024;
   const AVATAR_KEY = 'doclab_avatar';
   const PROFILE_KEY = 'doclab_profile';
   const APPOINTMENTS_KEY = 'doclab_appointments';
 
-  let username = localStorage.getItem('username') || localStorage.getItem('chat_user') || '';
-  // Проверяем сессию на сервере (Render использует один origin)
-  fetch('/api/me', {credentials:'include'})
-    .then(r => r.ok ? r.json() : null)
-    .then(d => {
-      if (!d || !d.ok) {
-        location.href = '/login.html';
-        return;
-      }
-      username = d.user;
-      localStorage.setItem('username', username);
-      connectWS();
-    })
-    .catch(() => { location.href = '/login.html'; });
+  const username = localStorage.getItem('chat_user');
+  const password = localStorage.getItem('chat_pass');
+  if (!username || !password) {
+    location.href = 'login.html';
+  }
 
-/* Навигация по экранам */
+  /* Навигация по экранам */
 
   const screens = document.querySelectorAll('.screen');
   const navItems = document.querySelectorAll('.nav-item[data-screen]');
@@ -1670,7 +1750,7 @@
   const roomsMeta = new Map();
   const unread = new Map();
   const lastMessages = new Map();
-  const roomReadState = new Map();
+  const lastReadByOthers = new Map();
   const messageStore = new Map();
 
   const groupsListEl = document.getElementById('groups-list');
@@ -1678,6 +1758,11 @@
   const messagesEl = document.getElementById('messages');
   const presenceEl = document.getElementById('presence');
   const roomTitleEl = document.getElementById('room-title');
+  const headerAvatarEl = document.getElementById('chat-room-avatar');
+
+  roomTitleEl.addEventListener('click', () => {
+    if (currentRoom) openRoomProfile();
+  });
   const typingEl = document.getElementById('typing-indicator');
   const chatEmptyEl = document.getElementById('chat-empty');
   const chatPanelEl = document.getElementById('chat-panel');
@@ -1742,36 +1827,64 @@
   return msg;
   }
 
-  function isRoomRead(room) {
-    return !!room && !!roomReadState.get(room);
-  }
+  // Read receipts: last message id that someone else has read in a room
+function getLastReadByOthers(room) {
+  return Number(lastReadByOthers.get(room) || 0);
+}
 
-  function updateTicksForRoom(room) {
-    if (!room || room !== currentRoom) return;
-    const read = isRoomRead(room);
-    document.querySelectorAll('#messages .message-row--me .msg-ticks').forEach(ticks => {
-      ticks.classList.toggle('msg-ticks--single', !read);
-      ticks.classList.toggle('msg-ticks--double', read);
-    });
-  }
+function updateTicksForRoom(room) {
+  if (!room || room !== currentRoom) return;
+  const upTo = getLastReadByOthers(room);
+  document.querySelectorAll('#messages .message-row--me').forEach(row => {
+    const id = Number(row.dataset.id || 0);
+    const ticks = row.querySelector('.msg-ticks');
+    if (!ticks) return;
+    const read = upTo && id <= upTo;
+    ticks.classList.toggle('msg-ticks--single', !read);
+    ticks.classList.toggle('msg-ticks--double', read);
+  });
+}
 
-  function setRoomRead(room, read) {
-    if (!room) return;
-    roomReadState.set(room, !!read);
-    updateTicksForRoom(room);
+function setLastReadByOthers(room, upTo) {
+  if (!room) return;
+  const n = Number(upTo || 0);
+  if (!n) return;
+  const prev = Number(lastReadByOthers.get(room) || 0);
+  if (n > prev) lastReadByOthers.set(room, n);
+  updateTicksForRoom(room);
+}
+
+function sendMarkRead(room) {
+  if (!room || !ws || ws.readyState !== WebSocket.OPEN) return;
+  const arr = messageStore.get(room) || [];
+  let upTo = 0;
+  for (let i = arr.length - 1; i >= 0; i--) {
+    const x = arr[i];
+    if (x && !x.deleted) { upTo = Number(x.id || 0); break; }
   }
+  if (upTo) ws.send(JSON.stringify({ type:'mark_read', room, up_to: upTo }));
+}
+
+function isGroupRoom(room) {
+  return !!room && !!roomsMeta.get(room)?.public;
+}
+
+function isRoomAdmin(room) {
+  const meta = roomsMeta.get(room);
+  return !!room && !!meta && !!meta.public && meta.owner === username;
+}
 
   function connectWs() {
     const host = location.hostname || '127.0.0.1';
     const scheme = location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const url = scheme + location.host + '/ws';
+    const url = scheme + host + '/ws';
     ws = new WebSocket(url);
 
     ws.addEventListener('open', () => {
-      // Аутентификация берётся из HTTP-сессии (cookie). Ждём auth_ok.
+      ws.send(JSON.stringify({ type:'login', username, password }));
     });
 
-ws.addEventListener('message', (ev) => {
+    ws.addEventListener('message', (ev) => {
       let m;
       try { m = JSON.parse(ev.data); } catch { return; }
 
@@ -1784,7 +1897,7 @@ ws.addEventListener('message', (ev) => {
       } else if (m.type === 'rooms') {
         updateRooms(m.items || []);
       } else if (m.type === 'room_created') {
-        roomsMeta.set(m.room, { public:!!m.public, owner:username });
+        roomsMeta.set(m.room, { public:!!m.public, owner:(m.owner || username), avatar: m.avatar || null, title: m.title || null, dm: !!m.dm });
         unread.set(m.room, 0);
         renderRooms();
         selectRoom(m.room);
@@ -1793,7 +1906,7 @@ ws.addEventListener('message', (ev) => {
         setChatActive(true);
         updateRoomHeader();
         unread.set(m.room, 0);
-        setRoomRead(m.room, true);
+        sendMarkRead(m.room);
         renderRooms();
       } else if (m.type === 'left') {
         if (m.room === currentRoom) {
@@ -1811,6 +1924,7 @@ ws.addEventListener('message', (ev) => {
             renderMessage(msg);
           });
           updateTicksForRoom(currentRoom);
+          sendMarkRead(currentRoom);
         }
       } else if (m.type === 'presence') {
         if (m.room === currentRoom) {
@@ -1818,6 +1932,78 @@ ws.addEventListener('message', (ev) => {
         }
       } else if (m.type === 'text' || m.type === 'file') {
         handleIncomingMessage(m);
+
+} else if (m.type === 'read') {
+  // someone read messages in this room
+  if (m.room && m.from !== username) {
+    setLastReadByOthers(m.room, m.up_to);
+    // refresh preview ticks in active room
+    updateTicksForRoom(m.room);
+  }
+} else if (m.type === 'room_info') {
+  // room profile/meta from server
+  if (m.room) {
+    const meta = roomsMeta.get(m.room) || { public: !!m.public, owner: m.owner || '' };
+    if (typeof m.public === 'boolean') meta.public = !!m.public;
+    if (m.owner) meta.owner = m.owner;
+    if (m.title) meta.title = m.title;
+    if (m.avatar !== undefined) meta.avatar = m.avatar; // base64 data url or null
+    if (Array.isArray(m.members)) meta.members = m.members;
+    roomsMeta.set(m.room, meta);
+    renderRooms();
+    if (m.room === currentRoom) updateRoomHeader();
+    if (roomProfileModal.classList.contains('overlay--show') && m.room === currentRoom) {
+      renderRoomProfile();
+    }
+  }
+} else if (m.type === 'room_avatar') {
+  if (m.room) {
+    const meta = roomsMeta.get(m.room) || { public:false, owner:'' };
+    meta.avatar = m.avatar || null;
+    roomsMeta.set(m.room, meta);
+    renderRooms();
+    if (m.room === currentRoom) updateRoomHeader();
+    if (roomProfileModal.classList.contains('overlay--show') && m.room === currentRoom) renderRoomProfile();
+  }
+} else if (m.type === 'room_renamed') {
+  // rename room: move all local maps
+  const oldName = m.old || m.old_room || m.from_room;
+  const newName = m.new || m.new_room || m.room;
+  if (oldName && newName && oldName !== newName) {
+    const meta = roomsMeta.get(oldName);
+    if (meta) {
+      roomsMeta.delete(oldName);
+      roomsMeta.set(newName, meta);
+    }
+    const um = unread.get(oldName);
+    if (um != null) { unread.delete(oldName); unread.set(newName, um); }
+    const lm = lastMessages.get(oldName);
+    if (lm) { lastMessages.delete(oldName); lastMessages.set(newName, lm); }
+    const ms = messageStore.get(oldName);
+    if (ms) { messageStore.delete(oldName); messageStore.set(newName, ms.map(x => Object.assign({}, x, { room: newName }))); }
+    const rr = lastReadByOthers.get(oldName);
+    if (rr) { lastReadByOthers.delete(oldName); lastReadByOthers.set(newName, rr); }
+
+    if (currentRoom === oldName) currentRoom = newName;
+    renderRooms();
+    updateRoomHeader();
+    if (roomProfileModal.classList.contains('overlay--show')) renderRoomProfile();
+  }
+} else if (m.type === 'room_deleted') {
+  const roomName = m.room;
+  if (roomName) {
+    roomsMeta.delete(roomName);
+    unread.delete(roomName);
+    lastMessages.delete(roomName);
+    messageStore.delete(roomName);
+    lastReadByOthers.delete(roomName);
+    if (currentRoom === roomName) {
+      setChatActive(false);
+      showToast('Беседа удалена');
+    }
+    renderRooms();
+    if (roomProfileModal.classList.contains('overlay--show') && currentRoom === roomName) closeRoomProfile();
+  }
       } else if (m.type === 'typing') {
         if (m.room === currentRoom && m.from !== username) {
           typingEl.textContent = m.from + ' печатает…';
@@ -1839,7 +2025,7 @@ ws.addEventListener('message', (ev) => {
   function updateRooms(items) {
     roomsMeta.clear();
     items.forEach(it => {
-      roomsMeta.set(it.name, { public:!!it.public, owner:it.owner || null });
+      roomsMeta.set(it.name, { public:!!it.public, owner:it.owner || null, avatar: it.avatar || null, title: it.title || null, dm: !!it.dm });
       if (!unread.has(it.name)) unread.set(it.name, 0);
     });
     renderRooms();
@@ -1851,6 +2037,11 @@ ws.addEventListener('message', (ev) => {
       name,
       public: meta.public,
       owner: meta.owner,
+      avatar: meta.avatar || null,
+      title: meta.title || name,
+      dm: !!meta.dm,
+      title: meta.title || null,
+      dm: !!meta.dm,
       preview: info.preview || (meta.public ? 'Групповой чат' : 'Личный чат'),
       time: info.time || null,
       unread: unread.get(name) || 0
@@ -1878,14 +2069,20 @@ ws.addEventListener('message', (ev) => {
 
       const avatar = document.createElement('div');
       avatar.className = 'room-avatar';
-      avatar.textContent = (room.name || '?').slice(0,2).toUpperCase();
-
-      const textWrap = document.createElement('div');
+      if (room.avatar) {
+        avatar.style.backgroundImage = 'url(' + room.avatar + ')';
+        avatar.style.backgroundSize = 'cover';
+        avatar.style.backgroundPosition = 'center';
+        avatar.textContent = '';
+      } else {
+        avatar.textContent = ((room.title || room.name) || '?').slice(0,2).toUpperCase();
+      }
+const textWrap = document.createElement('div');
       textWrap.className = 'room-text';
 
       const nameEl = document.createElement('div');
       nameEl.className = 'room-name';
-      nameEl.textContent = room.name;
+      nameEl.textContent = room.title || room.name;
 
       const subtitle = document.createElement('div');
       subtitle.className = 'room-subtitle';
@@ -1946,9 +2143,27 @@ ws.addEventListener('message', (ev) => {
     if (!currentRoom) {
       roomTitleEl.textContent = 'Чат';
       presenceEl.textContent = 'Онлайн: — / —';
+      if (headerAvatarEl) {
+        headerAvatarEl.style.backgroundImage = '';
+        headerAvatarEl.textContent = '';
+      }
       return;
     }
-    roomTitleEl.textContent = currentRoom;
+
+    const meta = roomsMeta.get(currentRoom) || {};
+    roomTitleEl.textContent = meta.title || currentRoom;
+
+    if (headerAvatarEl) {
+      if (meta.avatar) {
+        headerAvatarEl.style.backgroundImage = 'url(' + meta.avatar + ')';
+        headerAvatarEl.style.backgroundSize = 'cover';
+        headerAvatarEl.style.backgroundPosition = 'center';
+        headerAvatarEl.textContent = '';
+      } else {
+        headerAvatarEl.style.backgroundImage = '';
+        headerAvatarEl.textContent = (currentRoom || '?').slice(0,2).toUpperCase();
+      }
+    }
   }
 
   function updatePresence(users) {
@@ -2025,26 +2240,35 @@ ws.addEventListener('message', (ev) => {
       textBlock.textContent = body;
     } else if (m.type === 'file') {
       const url = 'data:' + m.mime + ';base64,' + m.data;
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = m.name || 'file';
-      link.textContent = m.name || 'Файл';
-      link.target = '_blank';
 
-      const fileWrap = document.createElement('div');
-      fileWrap.className = 'message-file';
-      fileWrap.appendChild(link);
-      textBlock.appendChild(fileWrap);
-
+      // Для медиа (фото/видео) не показываем имя файла — только контент
       if (m.mime && m.mime.startsWith('image/')) {
         const img = document.createElement('img');
         img.src = url;
-        img.alt = m.name || '';
+        img.alt = '';
         img.style.maxWidth = '260px';
         img.style.borderRadius = '10px';
         img.style.display = 'block';
-        img.style.marginTop = '4px';
         textBlock.appendChild(img);
+      } else if (m.mime && m.mime.startsWith('video/')) {
+        const vid = document.createElement('video');
+        vid.src = url;
+        vid.controls = true;
+        vid.style.maxWidth = '260px';
+        vid.style.borderRadius = '10px';
+        vid.style.display = 'block';
+        textBlock.appendChild(vid);
+      } else {
+        // на будущее: если появятся не-медиа файлы
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = m.name || 'file';
+        link.textContent = m.name || 'Файл';
+        link.target = '_blank';
+        const fileWrap = document.createElement('div');
+        fileWrap.className = 'message-file';
+        fileWrap.appendChild(link);
+        textBlock.appendChild(fileWrap);
       }
     }
 
@@ -2067,7 +2291,9 @@ ws.addEventListener('message', (ev) => {
 
     if (isMe) {
       const ticks = document.createElement('span');
-      ticks.className = 'msg-ticks ' + (isRoomRead(roomName) ? 'msg-ticks--double' : 'msg-ticks--single');
+      const upTo = getLastReadByOthers(roomName);
+      const read = upTo && Number(m.id || 0) <= upTo;
+      ticks.className = 'msg-ticks ' + (read ? 'msg-ticks--double' : 'msg-ticks--single');
       meta.appendChild(ticks);
     }
 
@@ -2086,13 +2312,14 @@ ws.addEventListener('message', (ev) => {
     lastMessages.set(room, { preview, time:m.ts });
 
     if (m.from === username) {
-      setRoomRead(room, false);
+      // outgoing message: ticks are single until we receive read receipts
     }
 
-    storeMessage(m);
+storeMessage(m);
 
     if (room === currentRoom) {
       renderMessage(m);
+      if (m.from !== username) sendMarkRead(room);
     } else {
       unread.set(room, (unread.get(room) || 0) + 1);
     }
@@ -2366,7 +2593,12 @@ ws.addEventListener('message', (ev) => {
       return;
     }
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type:'create_room', room:name, public:isPublic }));
+      if (isPublic) {
+        ws.send(JSON.stringify({ type:'create_room', room:name, public:true }));
+      } else {
+        // личный чат без создания беседы: name = username собеседника
+        ws.send(JSON.stringify({ type:'dm_open', user:name }));
+      }
     }
     closeRoomModal();
   });
@@ -2402,7 +2634,8 @@ ws.addEventListener('message', (ev) => {
     const delBtn = msgMenu.querySelector('button[data-action="delete"]');
 
     editBtn.style.display = (isMe && msg.type === 'text' && !msg.deleted) ? 'block' : 'none';
-    delBtn.style.display = (isMe && !msg.deleted) ? 'block' : 'none';
+    const canDelete = (!msg.deleted) && (isMe || (isGroupRoom(msg.room || currentRoom) && isRoomAdmin(msg.room || currentRoom)));
+    delBtn.style.display = canDelete ? 'block' : 'none';
 
     msgMenu.classList.add('msg-menu--show');
   }
@@ -2451,7 +2684,8 @@ ws.addEventListener('message', (ev) => {
         startEditMessage(id, getMessageText(menuMsg));
       }
     } else if (action === 'delete') {
-      if (menuMsg.from === username && ws && ws.readyState === WebSocket.OPEN) {
+      const canDelete = (!menuMsg.deleted) && (menuMsg.from === username || (isGroupRoom(room) && isRoomAdmin(room)));
+      if (canDelete && ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type:'delete_msg', room:room, id:id }));
       }
     }
@@ -2504,7 +2738,10 @@ ws.addEventListener('message', (ev) => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     const action = btn.dataset.action;
-    if (action === 'invite') {
+    if (action === 'profile') {
+      chatMenu.classList.remove('chat-menu--show');
+      openRoomProfile();
+    } else if (action === 'invite') {
       chatMenu.classList.remove('chat-menu--show');
       openInviteModal();
     }
@@ -2888,7 +3125,293 @@ ws.addEventListener('message', (ev) => {
     setScreen('chat');
   });
 
-  connectWs();
+  /* Профиль беседы */
+
+const roomProfileModal = document.getElementById('room-profile-modal');
+const roomProfileAvatar = document.getElementById('room-profile-avatar');
+const roomProfileTitle = document.getElementById('room-profile-title');
+const roomProfileSub = document.getElementById('room-profile-sub');
+const roomProfileActions = document.getElementById('room-profile-actions');
+
+const roomProfileMedia = document.getElementById('room-profile-media');
+const roomProfileLinks = document.getElementById('room-profile-links');
+const roomProfileFiles = document.getElementById('room-profile-files');
+
+const roomProfileCloseBtn = document.getElementById('room-profile-close-btn');
+const roomProfileRenameBtn = document.getElementById('room-profile-rename-btn');
+const roomProfileAvatarBtn = document.getElementById('room-profile-avatar-btn');
+const roomProfileDeleteBtn = document.getElementById('room-profile-delete-btn');
+const roomAvatarInput = document.getElementById('room-avatar-input');
+
+const roomRenameModal = document.getElementById('room-rename-modal');
+const roomRenameInput = document.getElementById('room-rename-input');
+const roomRenameSaveBtn = document.getElementById('room-rename-save-btn');
+const roomRenameCancelBtn = document.getElementById('room-rename-cancel-btn');
+
+let roomProfileTab = 'media';
+
+function roomInitials(name) {
+  const s = String(name || '').trim();
+  if (!s) return 'CH';
+  const parts = s.split(/\s+/).filter(Boolean);
+  const a = (parts[0] || '').slice(0, 1);
+  const b = (parts[1] || '').slice(0, 1);
+  return (a + b).toUpperCase() || s.slice(0, 2).toUpperCase();
+}
+
+function getRoomDisplayTitle(room) {
+  const meta = roomsMeta.get(room) || {};
+  return meta.title || room;
+}
+
+function getRoomAvatar(room) {
+  const meta = roomsMeta.get(room) || {};
+  return meta.avatar || null;
+}
+
+function openRoomProfile() {
+  if (!currentRoom) return;
+  roomProfileModal.classList.add('overlay--show');
+  roomProfileTab = 'media';
+  document.querySelectorAll('#room-profile-modal .room-profile-tab').forEach(b => {
+    b.classList.toggle('room-profile-tab--active', b.dataset.tab === 'media');
+  });
+  document.querySelectorAll('#room-profile-modal .room-profile-pane').forEach(p => {
+    p.classList.toggle('room-profile-pane--active', p.dataset.pane === 'media');
+  });
+
+  // Request up-to-date info from server (if supported)
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type:'room_info', room: currentRoom }));
+  }
+  renderRoomProfile();
+}
+
+function closeRoomProfile() {
+  roomProfileModal.classList.remove('overlay--show');
+}
+
+roomProfileCloseBtn.addEventListener('click', closeRoomProfile);
+roomProfileModal.addEventListener('click', (e) => { if (e.target === roomProfileModal) closeRoomProfile(); });
+
+function openRoomRenameModal() {
+  if (!currentRoom) return;
+  roomRenameModal.classList.add('overlay--show');
+  roomRenameInput.value = getRoomDisplayTitle(currentRoom) || '';
+  setTimeout(() => roomRenameInput.focus(), 0);
+}
+function closeRoomRenameModal() { roomRenameModal.classList.remove('overlay--show'); }
+roomRenameCancelBtn.addEventListener('click', closeRoomRenameModal);
+roomRenameModal.addEventListener('click', (e) => { if (e.target === roomRenameModal) closeRoomRenameModal(); });
+
+roomRenameSaveBtn.addEventListener('click', () => {
+  const title = roomRenameInput.value.trim();
+  if (!currentRoom || !title) return;
+  if (!isRoomAdmin(currentRoom)) { showToast('Недостаточно прав'); return; }
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type:'rename_room', room: currentRoom, title }));
+  }
+  closeRoomRenameModal();
+});
+
+roomProfileRenameBtn.addEventListener('click', () => {
+  if (!currentRoom) return;
+  if (!isRoomAdmin(currentRoom)) { showToast('Недостаточно прав'); return; }
+  openRoomRenameModal();
+});
+
+roomProfileAvatarBtn.addEventListener('click', () => {
+  if (!currentRoom) return;
+  if (!isRoomAdmin(currentRoom)) { showToast('Недостаточно прав'); return; }
+  roomAvatarInput.click();
+});
+
+roomAvatarInput.addEventListener('change', () => {
+  const file = roomAvatarInput.files && roomAvatarInput.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('Можно выбрать только изображение');
+    roomAvatarInput.value = '';
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('Файл изображения больше 5 МБ');
+    roomAvatarInput.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type:'set_room_avatar', room: currentRoom, avatar: dataUrl }));
+    }
+    roomAvatarInput.value = '';
+  };
+  reader.readAsDataURL(file);
+});
+
+roomProfileDeleteBtn.addEventListener('click', () => {
+  if (!currentRoom) return;
+  if (!isRoomAdmin(currentRoom)) { showToast('Недостаточно прав'); return; }
+  if (!confirm('Удалить беседу без возможности восстановления?')) return;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type:'delete_room', room: currentRoom }));
+  }
+  closeRoomProfile();
+});
+
+document.querySelectorAll('#room-profile-modal .room-profile-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    roomProfileTab = btn.dataset.tab;
+    document.querySelectorAll('#room-profile-modal .room-profile-tab').forEach(b => {
+      b.classList.toggle('room-profile-tab--active', b === btn);
+    });
+    document.querySelectorAll('#room-profile-modal .room-profile-pane').forEach(p => {
+      p.classList.toggle('room-profile-pane--active', p.dataset.pane === roomProfileTab);
+    });
+    renderRoomArchives(roomProfileTab);
+  });
+});
+
+function extractLinksFromText(text) {
+  const s = String(text || '');
+  const re = /https?:\/\/[^\s<>"']+/g;
+  const out = [];
+  let m;
+  while ((m = re.exec(s)) !== null) out.push(m[0]);
+  return out;
+}
+
+function renderRoomProfile() {
+  if (!currentRoom) return;
+
+  const meta = roomsMeta.get(currentRoom) || {};
+  const title = getRoomDisplayTitle(currentRoom);
+  const isGroup = !!meta.public;
+  const owner = meta.owner || '';
+  const members = Array.isArray(meta.members) ? meta.members : [];
+
+  roomProfileTitle.textContent = title || currentRoom;
+
+  if (isGroup) {
+    const memCount = members.length ? members.length : '';
+    roomProfileSub.textContent = 'Групповой чат' + (owner ? ' • Администратор: ' + owner : '') + (memCount ? ' • Участников: ' + memCount : '');
+  } else {
+    roomProfileSub.textContent = 'Личный чат';
+  }
+
+  const avatar = getRoomAvatar(currentRoom);
+  if (avatar) {
+    roomProfileAvatar.style.backgroundImage = 'url(' + avatar + ')';
+    roomProfileAvatar.textContent = '';
+  } else {
+    roomProfileAvatar.style.backgroundImage = '';
+    roomProfileAvatar.textContent = roomInitials(title || currentRoom);
+  }
+
+  roomProfileActions.style.display = (isRoomAdmin(currentRoom) ? 'flex' : 'none');
+  renderRoomArchives(roomProfileTab);
+}
+
+function renderRoomArchives(tab) {
+  if (!currentRoom) return;
+
+  const msgs = messageStore.get(currentRoom) || [];
+  const notDeleted = msgs.filter(m => m && !m.deleted);
+
+  if (tab === 'media') {
+    const items = notDeleted.filter(m => m.type === 'file' && m.mime && (m.mime.startsWith('image/') || m.mime.startsWith('video/')));
+    if (!items.length) {
+      roomProfileMedia.innerHTML = '<div class="room-archive-empty">Нет медиа</div>';
+      return;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'room-archive-grid';
+    items.slice().reverse().forEach(m => {
+      const url = 'data:' + m.mime + ';base64,' + m.data;
+      const box = document.createElement('div');
+      box.className = 'room-archive-item';
+      if (m.mime.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = m.name || '';
+        box.appendChild(img);
+      } else {
+        const v = document.createElement('video');
+        v.src = url;
+        v.controls = true;
+        box.appendChild(v);
+      }
+      box.addEventListener('click', () => window.open(url, '_blank'));
+      grid.appendChild(box);
+    });
+    roomProfileMedia.innerHTML = '';
+    roomProfileMedia.appendChild(grid);
+    return;
+  }
+
+  if (tab === 'links') {
+    const allLinks = [];
+    notDeleted.forEach(m => {
+      if (m.type !== 'text') return;
+      extractLinksFromText(getMessageText(m)).forEach(url => allLinks.push({ url, ts: m.ts || 0 }));
+    });
+    if (!allLinks.length) {
+      roomProfileLinks.innerHTML = '<div class="room-archive-empty">Нет ссылок</div>';
+      return;
+    }
+    const list = document.createElement('div');
+    list.className = 'room-archive-list';
+    allLinks.slice().reverse().forEach(x => {
+      const row = document.createElement('div');
+      row.className = 'room-archive-link';
+      const a = document.createElement('a');
+      a.href = x.url;
+      a.target = '_blank';
+      a.rel = 'noreferrer';
+      a.textContent = x.url;
+      const meta = document.createElement('div');
+      meta.className = 'room-archive-meta';
+      meta.textContent = x.ts ? formatTime(x.ts) : '';
+      row.appendChild(a);
+      row.appendChild(meta);
+      list.appendChild(row);
+    });
+    roomProfileLinks.innerHTML = '';
+    roomProfileLinks.appendChild(list);
+    return;
+  }
+
+  if (tab === 'files') {
+    const items = notDeleted.filter(m => m.type === 'file');
+    if (!items.length) {
+      roomProfileFiles.innerHTML = '<div class="room-archive-empty">Нет файлов</div>';
+      return;
+    }
+    const list = document.createElement('div');
+    list.className = 'room-archive-list';
+    items.slice().reverse().forEach(m => {
+      const url = 'data:' + m.mime + ';base64,' + m.data;
+      const row = document.createElement('div');
+      row.className = 'room-archive-file';
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.download = m.name || 'file';
+      a.textContent = m.name || 'Файл';
+      const meta = document.createElement('div');
+      meta.className = 'room-archive-meta';
+      meta.textContent = m.ts ? formatTime(m.ts) : '';
+      row.appendChild(a);
+      row.appendChild(meta);
+      list.appendChild(row);
+    });
+    roomProfileFiles.innerHTML = '';
+    roomProfileFiles.appendChild(list);
+  }
+}
+
+connectWs();
 </script>
 </body>
 </html>

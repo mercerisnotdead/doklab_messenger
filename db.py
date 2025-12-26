@@ -1,19 +1,6 @@
 from __future__ import annotations
 
 import os
-
-def _normalize_db_url(url: str) -> str:
-    # Render часто даёт postgresql://...  но для SQLAlchemy async нужен postgresql+asyncpg://
-    if url.startswith("postgresql://"):
-        url = "postgresql+asyncpg://" + url[len("postgresql://"):]
-    # Если используется внешний Render Postgres, обычно нужен SSL
-    if url.startswith("postgresql+asyncpg://") and "sslmode=" not in url:
-        # не добавляем sslmode для локальной БД
-        if "localhost" not in url and "127.0.0.1" not in url:
-            sep = "&" if "?" in url else "?"
-            url = url + f"{sep}sslmode=require"
-    return url
-
 from datetime import datetime
 
 from sqlalchemy import (
@@ -36,8 +23,17 @@ from sqlalchemy.sql import func
 
 # Строка подключения к PostgreSQL
 # Можно переопределить через переменную окружения DATABASE_URL
-DATABASE_URL = _normalize_db_url(os.getenv("DATABASE_URL", "postgresql+asyncpg://chat:chat@localhost:5432/chatdb"))
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://chat:chat@localhost:5432/chatdb",
+)
 
+# Render часто выдаёт postgres://... или postgresql://...
+# Для Async SQLAlchemy + asyncpg нужна схема postgresql+asyncpg://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 engine = create_async_engine(DATABASE_URL, echo=True, future=True)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 

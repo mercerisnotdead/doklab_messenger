@@ -317,71 +317,80 @@
   </div>
 
 <script>
-(function(){
-  const $ = (id) => document.getElementById(id);
-  const statusEl = document.getElementById('status');
+  const msg = document.getElementById('msg');
+  const uEl = document.getElementById('u');
+  const pEl = document.getElementById('p');
 
-  function setStatus(text, isError=false){
-    if(!statusEl) return;
-    statusEl.textContent = text || '';
-    statusEl.style.color = isError ? '#d93025' : '#188038';
-  }
+  function connectAndAuth(type) {
+    msg.textContent = 'Соединяюсь с сервером...';
+    const host = location.hostname || '127.0.0.1';
+    const scheme = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const url = scheme + host + '/ws';
+    const ws = new WebSocket(url);
 
-  async function postJSON(url, payload){
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      credentials: 'include',
-      body: JSON.stringify(payload || {})
+    ws.addEventListener('open', () => {
+      ws.send(JSON.stringify({
+        type,
+        username: uEl.value.trim(),
+        password: pEl.value
+      }));
     });
-    const data = await res.json().catch(()=> ({}));
-    return {res, data};
+
+    ws.addEventListener('message', (ev) => {
+      let data;
+      try { data = JSON.parse(ev.data); } catch { return; }
+      if (data.type === 'auth_ok') {
+        // запоминаем пользователя
+        localStorage.setItem('chat_user', uEl.value.trim());
+        localStorage.setItem('chat_pass', pEl.value);
+        ws.close();
+        location.href = 'index.html';
+      } else if (data.type === 'error') {
+        msg.textContent = 'Ошибка: ' + (data.text || '');
+      } else if (data.type === 'system') {
+        msg.textContent = data.text || '';
+      }
+    });
+
+    ws.addEventListener('close', () => {
+      if (!msg.textContent) {
+        msg.textContent = 'Соединение закрыто сервером.';
+      }
+    });
   }
 
-  async function doLogin(isRegister){
-    const username = (document.querySelector('input[name="email"]')?.value || '').trim();
-    const password = (document.querySelector('input[name="password"]')?.value || '').trim();
-
-    if(!username || !password){
-      setStatus('Введите логин и пароль', true);
+  document.getElementById('login-btn').addEventListener('click', () => {
+    if (!uEl.value.trim() || !pEl.value) {
+      msg.textContent = 'Введите почту и пароль.';
       return;
     }
-
-    setStatus(isRegister ? 'Регистрация...' : 'Вход...');
-
-    const url = isRegister ? '/api/register' : '/api/login';
-    const {res, data} = await postJSON(url, {username, password});
-
-    if(!res.ok || !data.ok){
-      setStatus(data.error || 'Ошибка авторизации', true);
-      return;
-    }
-
-    // Для отображения имени в UI можно хранить username локально (пароль не храним).
-    localStorage.setItem('username', data.user);
-
-    setStatus('Готово, перенаправляю...');
-    window.location.href = '/index.html';
-  }
-
-  // Кнопки
-  const btnLogin = document.querySelector('button[type="submit"], .btn-login, #btnLogin');
-  const btnRegister = document.querySelector('.btn-register, #btnRegister');
-
-  // В исходной вёрстке кнопки могут быть без id — цепляемся по тексту
-  document.querySelectorAll('button').forEach(b=>{
-    const t=(b.textContent||'').toLowerCase();
-    if(t.includes('войти')) b.addEventListener('click', (e)=>{e.preventDefault(); doLogin(false);});
-    if(t.includes('зарегистр')) b.addEventListener('click', (e)=>{e.preventDefault(); doLogin(true);});
+    connectAndAuth('login');
   });
 
-  // Если уже залогинен — сразу в чат
-  fetch('/api/me', {credentials:'include'}).then(r=>r.ok?r.json():null).then(d=>{
-    if(d && d.ok) window.location.href='/index.html';
-    else setStatus('Готово к входу');
-  }).catch(()=>setStatus('Готово к входу'));
+  function startRegister() {
+    if (!uEl.value.trim() || !pEl.value) {
+      msg.textContent = 'Введите почту и пароль для регистрации.';
+      return;
+    }
+    connectAndAuth('register');
+  }
 
-})();
+  document.getElementById('register-btn').addEventListener('click', startRegister);
+  document.getElementById('register-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    startRegister();
+  });
+
+  document.getElementById('forgot-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    msg.textContent = 'Обратитесь к администратору для восстановления доступа.';
+  });
+
+  pEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('login-btn').click();
+    }
+  });
 </script>
 </body>
 </html>
