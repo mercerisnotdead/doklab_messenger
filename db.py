@@ -13,151 +13,102 @@ from sqlalchemy import (
     ForeignKey,
     UniqueConstraint,
 )
-from sqlalchemy.ext.asyncio import (
-    create_async_engine,
-    async_sessionmaker,
-    AsyncSession,
-)
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
-
-# Строка подключения к PostgreSQL
-# Можно переопределить через переменную окружения DATABASE_URL
-RAW_DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://chat:chat@localhost:5432/chatdb")
-# Render и многие хостинги выдают URL в формате postgres:// или postgresql://
-if RAW_DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = "postgresql+asyncpg://" + RAW_DATABASE_URL[len("postgres://"):]
-elif RAW_DATABASE_URL.startswith("postgresql://") and not RAW_DATABASE_URL.startswith("postgresql+asyncpg://"):
-    DATABASE_URL = "postgresql+asyncpg://" + RAW_DATABASE_URL[len("postgresql://"):]
-else:
-    DATABASE_URL = RAW_DATABASE_URL
-
-# В продакшене SQL echo лучше выключать; при необходимости включите SQL_ECHO=1
-SQL_ECHO = os.getenv("SQL_ECHO", "").strip() not in ("", "0", "false", "False")
-engine = create_async_engine(DATABASE_URL, echo=SQL_ECHO, future=True)
-AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 Base = declarative_base()
 
 
+def _normalize_database_url(url: str | None) -> str:
+    """
+    Render часто отдаёт URL вида:
+      postgresql://user:pass@host/db
+    А SQLAlchemy async требует:
+      postgresql+asyncpg://user:pass@host/db
+
+    Также иногда встречается postgres://
+    """
+    if not url:
+        return "postgresql+asyncpg://chat:chat@localhost:5432/chatdb"
+
+    url = url.strip()
+
+    # Render может дать postgres://
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://") :]
+
+    # Приводим к asyncpg
+    if url.startswith("postgresql+asyncpg://"):
+        return url
+
+    if url.startswith("postgresql://"):
+        return "postgresql+asyncpg://" + url[len("postgresql://") :]
+
+    # Если вдруг уже другой драйвер — оставим как есть
+    return url
+
+
+DATABASE_URL = _normalize_database_url(os.getenv("DATABASE_URL"))
+
+# Можно выключить шумные SQL-логи на Render:
+SQL_ECHO = os.getenv("SQL_ECHO", "0") == "1"
+
+engine = create_async_engine(DATABASE_URL, echo=SQL_ECHO, future=True)
+AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
 class User(Base):
     __tablename__ = "users"
-
     id = Column(Integer, primary_key=True)
-    username = Column(String(50), unique=True, nullable=False, index=True)
-    password_hash = Column(String(255), nullable=False)
-
-    # Профиль
-    full_name = Column(String(100), nullable=True)
-    position = Column(String(100), nullable=True)
-    department = Column(String(100), nullable=True)
-    avatar_url = Column(String(255), nullable=True)
-    about = Column(Text, nullable=True)
-
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-
-    rooms = relationship("RoomMember", back_populates="user")
+    username = Column(String(64), unique=True, nullable=False)
+    password = Column(String(128), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class Room(Base):
     __tablename__ = "rooms"
-
     id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False)
-    # False – обычный групповой чат, True – личный диалог 1:1
+    name = Column(String(255), nullable=False)
     is_direct = Column(Boolean, default=False, nullable=False)
-
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-
-    members = relationship("RoomMember", back_populates="room")
-    messages = relationship("Message", back_populates="room")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class RoomMember(Base):
     __tablename__ = "room_members"
-    __table_args__ = (
-        UniqueConstraint("room_id", "user_id", name="uq_room_member"),
-    )
-
     id = Column(Integer, primary_key=True)
-    room_id = Column(Integer, ForeignKey("rooms.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    room_id = Column(Integer, ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String(32), default="member", nullable=False)  # member/admin
+    joined_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    joined_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-
-    room = relationship("Room", back_populates="members")
-    user = relationship("User", back_populates="rooms")
+    __table_args__ = (UniqueConstraint("room_id", "user_id", name="uq_room_user"),)
 
 
 class Message(Base):
     __tablename__ = "messages"
-
     id = Column(Integer, primary_key=True)
-    room_id = Column(Integer, ForeignKey("rooms.id"), nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    text = Column(Text, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    room_id = Column(Integer, ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False)
+    sender_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
-    room = relationship("Room", back_populates="messages")
-    user = relationship("User")
-    reads = relationship("MessageRead", back_populates="message")
+    content = Column(Text, nullable=True)
+    media_type = Column(String(32), nullable=True)   # image/video/file/link
+    media_url = Column(Text, nullable=True)          # если храните ссылки/пути
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    edited_at = Column(DateTime(timezone=True), nullable=True)
+    is_deleted = Column(Boolean, default=False, nullable=False)
 
 
 class MessageRead(Base):
     __tablename__ = "message_reads"
-    __table_args__ = (
-        UniqueConstraint("message_id", "user_id", name="uq_message_read"),
-    )
-
     id = Column(Integer, primary_key=True)
-    message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    read_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    message_id = Column(Integer, ForeignKey("messages.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    read_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    message = relationship("Message", back_populates="reads")
-    user = relationship("User")
-
-
-class Appointment(Base):
-    """
-    Запись в календаре – приём пациента.
-    """
-    __tablename__ = "appointments"
-
-    id = Column(Integer, primary_key=True)
-    patient_name = Column(String(100), nullable=False)
-    policy_number = Column(String(50), nullable=False)
-    doctor = Column(String(100), nullable=True)
-    room = Column(String(50), nullable=True)
-
-    start_time = Column(DateTime(timezone=True), nullable=False)
-    end_time = Column(DateTime(timezone=True), nullable=False)
-
-    # Дополнительные поля для лабораторного интерфейса / статуса результатов
-    category = Column(String(100), nullable=True)  # тип анализа / категория
-    status = Column(String(50), nullable=False, server_default='pending')
-    result_url = Column(String(255), nullable=True)
-    completed_at = Column(DateTime(timezone=True), nullable=True)
-
-    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_by = relationship("User")
+    __table_args__ = (UniqueConstraint("message_id", "user_id", name="uq_msg_user_read"),)
 
 
 async def init_db() -> None:
-    """Создаёт таблицы, если их ещё нет."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-
-async def get_session() -> AsyncSession:
-    return AsyncSessionLocal()
