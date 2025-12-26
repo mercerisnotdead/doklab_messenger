@@ -1877,7 +1877,7 @@ function isRoomAdmin(room) {
   function connectWs() {
     const host = location.hostname || '127.0.0.1';
     const scheme = location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const url = scheme + host + ':8765';
+    const url = scheme + host + '/ws';
     ws = new WebSocket(url);
 
     ws.addEventListener('open', () => {

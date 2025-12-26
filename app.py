@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from datetime import datetime
 from pathlib import Path
 
 from flask import Flask, send_from_directory, redirect, request, jsonify
+from flask_sock import Sock
 
 from db import init_db, AsyncSessionLocal, Appointment
+from websocket_logic import handle_ws_message, on_ws_connect, on_ws_disconnect
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -17,15 +20,16 @@ app = Flask(
     static_url_path="",
 )
 
+sock = Sock(app)
 
+# --- INIT DB ---
 def _init_db_sync():
     asyncio.run(init_db())
 
-
-# инициализировать БД при старте приложения
 _init_db_sync()
 
 
+# --- ROUTES ---
 @app.route("/")
 def root():
     return redirect("/login.html")
@@ -38,18 +42,12 @@ def health():
 
 @app.route("/<path:filename>")
 def static_files(filename: str):
-    """Отдаём index.html, login.html, css, js и т.п."""
     return send_from_directory(BASE_DIR, filename)
 
 
+# --- API (appointments, как у вас было) ---
 @app.get("/api/appointments")
 async def get_appointments():
-    """Вернуть список записей для календаря.
-
-    Опциональные query-параметры:
-    - from: ISO-дата/дата-время
-    - to:   ISO-дата/дата-время
-    """
     date_from_s = request.args.get("from")
     date_to_s = request.args.get("to")
 
@@ -84,46 +82,29 @@ async def get_appointments():
                     "created_by_id": a.created_by_id,
                 }
             )
-
     return jsonify(items)
 
 
-@app.post("/api/appointments")
-async def create_appointment():
-    """Создать новую запись пациента в календаре."""
-    data = request.get_json(force=True) or {}
-
-    required = ["patient_name", "policy_number", "start_time", "end_time"]
-    missing = [k for k in required if not data.get(k)]
-    if missing:
-        return jsonify({"error": f"Отсутствуют поля: {', '.join(missing)}"}), 400
-
+# --- WEBSOCKET ---
+@sock.route("/ws")
+def websocket(ws):
+    on_ws_connect(ws)
     try:
-        start_time = datetime.fromisoformat(data["start_time"])
-        end_time = datetime.fromisoformat(data["end_time"])
-    except ValueError:
-        return jsonify({"error": "Неверный формат времени"}), 400
-
-    async with AsyncSessionLocal() as session:
-        a = Appointment(
-            patient_name=data["patient_name"],
-            policy_number=data["policy_number"],
-            doctor=data.get("doctor"),
-            room=data.get("room"),
-            start_time=start_time,
-            end_time=end_time,
-            category=data.get("category"),
-            status=data.get("status") or "pending",
-            result_url=data.get("result_url"),
-        )
-        session.add(a)
-        await session.commit()
-        await session.refresh(a)
-
-    return jsonify({"id": a.id}), 201
+        while True:
+            data = ws.receive()
+            if data is None:
+                break
+            try:
+                obj = json.loads(data)
+            except Exception:
+                ws.send(json.dumps({"type": "error", "text": "Некорректный JSON"}, ensure_ascii=False))
+                continue
+            handle_ws_message(ws, obj)
+    finally:
+        on_ws_disconnect(ws)
 
 
+# --- START ---
 if __name__ == "__main__":
-    host = os.getenv("FLASK_HOST", "127.0.0.1")
-    port = int(os.getenv("FLASK_PORT", "5000"))
-    app.run(host=host, port=port, debug=True)
+    port = int(os.environ.get("PORT", "5000"))
+    app.run(host="0.0.0.0", port=port, debug=False)

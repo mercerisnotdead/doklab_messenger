@@ -325,7 +325,7 @@
     msg.textContent = 'Соединяюсь с сервером...';
     const host = location.hostname || '127.0.0.1';
     const scheme = location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const url = scheme + host + ':8765';
+    const url = scheme + host + '/ws';
     const ws = new WebSocket(url);
 
     ws.addEventListener('open', () => {
