@@ -28,13 +28,7 @@ DATABASE_URL = os.getenv(
     "postgresql+asyncpg://chat:chat@localhost:5432/chatdb",
 )
 
-# Render часто выдаёт postgres://... или postgresql://...
-# Для Async SQLAlchemy + asyncpg нужна схема postgresql+asyncpg://
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-elif DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-engine = create_async_engine(DATABASE_URL, echo=True, future=True)
+engine = create_async_engine(DATABASE_URL, echo=(os.getenv('DB_ECHO','0')=='1'), future=True)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 Base = declarative_base()

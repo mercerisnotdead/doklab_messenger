@@ -6,12 +6,14 @@ from datetime import datetime
 from pathlib import Path
 
 from flask import Flask, send_from_directory, redirect, request, jsonify
-from flask_sock import Sock
+from dotenv import load_dotenv
 
 from db import init_db, AsyncSessionLocal, Appointment
-from websocket_logic import on_ws_connect, on_ws_disconnect, handle_ws_message
 
 BASE_DIR = Path(__file__).resolve().parent
+
+# Load environment from .env if present
+load_dotenv(dotenv_path=str(BASE_DIR / '.env'), override=False)
 
 app = Flask(
     __name__,
@@ -19,15 +21,14 @@ app = Flask(
     static_url_path="",
 )
 
-sock = Sock(app)
-
 
 def _init_db_sync():
     asyncio.run(init_db())
 
 
-# инициализировать БД при старте приложения
-_init_db_sync()
+# Инициализация БД: включайте AUTO_INIT_DB=1 при первом запуске/миграции
+if os.getenv('AUTO_INIT_DB', '0') == '1':
+    _init_db_sync()
 
 
 @app.route("/")
@@ -44,32 +45,6 @@ def health():
 def static_files(filename: str):
     """Отдаём index.html, login.html, css, js и т.п."""
     return send_from_directory(BASE_DIR, filename)
-
-
-@sock.route("/ws")
-def ws_route(ws):
-    """WebSocket endpoint для чата (один сервис на Render).
-
-    Ожидает JSON-сообщения (формат определён в websocket_logic.py).
-    """
-    on_ws_connect(ws)
-    try:
-        while True:
-            raw = ws.receive()
-            if raw is None:
-                break
-            # websocket_logic сам валидирует и отвечает ошибками,
-            # но мы передаём ему уже распарсенный объект.
-            import json
-            try:
-                obj = json.loads(raw)
-            except Exception:
-                ws.send(json.dumps({"type": "error", "text": "Некорректный JSON"}, ensure_ascii=False))
-                continue
-            handle_ws_message(ws, obj)
-    finally:
-        on_ws_disconnect(ws)
-
 
 
 @app.get("/api/appointments")

@@ -332,7 +332,8 @@ async def _db_register(username: str, password: str) -> bool:
         user_obj = res.scalar_one_or_none()
         if user_obj is not None:
             return False
-        user_obj = User(username=username, password_hash=password)
+        # Храним только хэш пароля (не plaintext)
+        user_obj = User(username=username, password_hash=generate_password_hash(password))
         session.add(user_obj)
         await session.commit()
         return True
@@ -341,8 +342,79 @@ async def _db_login(username: str, password: str) -> bool:
     u = await _db_get_user(username)
     if u is None:
         return False
-    return (u.password_hash or "") == password
+    ph = (u.password_hash or "")
+    # Поддержка миграции со старых plaintext паролей:
+    # если пароль в БД совпал строкой — переложить в хэш.
+    if ph == password:
+        async with AsyncSessionLocal() as session:
+            res = await session.execute(select(User).where(User.username == username))
+            u2 = res.scalar_one_or_none()
+            if u2 is not None:
+                u2.password_hash = generate_password_hash(password)
+                await session.commit()
+        return True
+    return check_password_hash(ph, password)
 
+
+
+async def _db_get_room_by_name(name: str) -> Room | None:
+    async with AsyncSessionLocal() as session:
+        res = await session.execute(select(Room).where(Room.name == name))
+        return res.scalar_one_or_none()
+
+async def _db_ensure_room(name: str, is_direct: bool = False) -> Room:
+    async with AsyncSessionLocal() as session:
+        res = await session.execute(select(Room).where(Room.name == name))
+        room = res.scalar_one_or_none()
+        if room is None:
+            room = Room(name=name, is_direct=is_direct)
+            session.add(room)
+            await session.commit()
+            await session.refresh(room)
+        return room
+
+async def _db_save_message(room_name: str, username: str, text: str) -> None:
+    async with AsyncSessionLocal() as session:
+        ures = await session.execute(select(User).where(User.username == username))
+        u = ures.scalar_one_or_none()
+        if u is None:
+            return
+        rres = await session.execute(select(Room).where(Room.name == room_name))
+        r = rres.scalar_one_or_none()
+        if r is None:
+            r = Room(name=room_name, is_direct=is_dm_room(room_name))
+            session.add(r)
+            await session.commit()
+            await session.refresh(r)
+        session.add(Message(room_id=r.id, user_id=u.id, text=text))
+        await session.commit()
+
+async def _db_load_history(room_name: str, limit: int = 50) -> list[dict]:
+    async with AsyncSessionLocal() as session:
+        rres = await session.execute(select(Room).where(Room.name == room_name))
+        r = rres.scalar_one_or_none()
+        if r is None:
+            return []
+        # последние N сообщений
+        q = (
+            select(Message, User.username)
+            .join(User, User.id == Message.user_id)
+            .where(Message.room_id == r.id)
+            .order_by(Message.id.desc())
+            .limit(limit)
+        )
+        res = await session.execute(q)
+        rows = res.all()
+        rows.reverse()
+        out = []
+        for msg, uname in rows:
+            out.append({
+                "room": room_name,
+                "from": uname,
+                "text": msg.text,
+                "ts": msg.created_at.isoformat() if msg.created_at else None,
+            })
+        return out
 
 # --------------------------- main message handler ----------------------------
 

@@ -754,7 +754,7 @@ async def main(host: str, port: int):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--port", type=int, default=int(os.getenv("WS_PORT","8765")))
     args = ap.parse_args()
     try:
         asyncio.run(main(args.host, args.port))

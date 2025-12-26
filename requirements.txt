@@ -4,5 +4,3 @@ asyncpg
 websockets
 werkzeug
 python-dotenv
-gunicorn
-flask-sock
